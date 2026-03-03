@@ -1,0 +1,97 @@
+\section{Transformer}
+\subsection{位置编码}
+在 RNN 中，句子是逐词送入网络的，以 I am good 为例，首先把 I 作为输入，接下来是 am，最后是good。
+然而，Transformer 并不遵循这个模式，它将句子中的所有词并行地输入到神经网络中。
+由于是并行输入，所以词序需要通过其他方式表示，Transformer 所采用的方式是位置编码。
+
+在 Transformer 中，位置编码以以矩阵的形式表示，位置编码矩阵 $\boldsymbol{P}$ 的维度与输入矩阵 $\boldsymbol{X}$ 的维度相同。
+在将输入矩阵直接传给 Transformer 之前，我们需将位置编码矩阵 $\boldsymbol{P}$ 加到输入矩阵 $\boldsymbol{X}$ 中，再将其作为输入送入网络。
+Transformer 中使用了正弦函数来计算位置编码：
+\begin{equation*}
+	P(\text{pos}, 2i) = \sin (\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}) \quad
+	P(\text{pos}, 2i+1) = \cos (\frac{\text{pos}}{10000^{2i/d_{\text{model}}}})
+\end{equation*}
+
+在上面的等式中，$\text{pos}$ 表示该词在句子中的位置，$i$ 表示在输入矩阵中的位置。
+$$
+	\boldsymbol{P} =
+	\begin{bmatrix}
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+	\end{bmatrix}
+$$
+
+\subsection{编码器与解码器}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.3\textwidth, keepaspectratio]{9-1.pdf}
+	\caption{Transformer编码器结构}
+\end{figure}
+Transformer 的编码器由一组 N 个编码器串联而成，每一个编码器的构造都是相同的，
+由自注意力层和前馈网络层组成，每层的输出都经过残差连接和归一化层（Add \& Norm）。
+前馈网络由多个全连接层组成，一般采用 ReLU 激活函数。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.35\textwidth, keepaspectratio]{9-2.pdf}
+	\caption{Transformer解码器结构}
+\end{figure}
+
+相较编码器，解码器的注意力层不太一样，它需要关注编码器的输出，因此解码器的注意力层分为两部分：带掩码的注意力层和交叉注意力层。
+交叉注意力层都有两个输入：一个来自带掩码的注意力层，另一个是编码器的输出。让我们用 $\boldsymbol{R}$ 来表示编码器的输出值，
+用 $\boldsymbol{M}$ 来表示由带掩码的注意力层输出的注意力矩阵，注意力的计算使用矩阵 $\boldsymbol{M}$ 创建查询矩阵 $\boldsymbol{Q}$，
+使用 $\boldsymbol{R}$ 创建键矩阵和值矩阵。
+在解码器中的带掩码的注意层中，我们对注意力计算中的矩阵进行掩码处理，确保解码器在生成每个单词时只能关注之前的单词。
+$$
+	\frac{\boldsymbol{Q}_i \cdot \boldsymbol{K}_i^\mathrm{T}}{\sqrt{d_k}} =
+	\begin{bmatrix}
+		             & \text{<sos>} & \text{我} & \text{很} & \text{好} \\
+		\text{<sos>} & 9.125        & -\infty  & -\infty  & -\infty  \\
+		\text{我}     & 5.0          & 12.37    & -\infty  & -\infty  \\
+		\text{很}     & 7.25         & 5.0      & 10.37    & -\infty  \\
+		\text{好}     & 1.5          & 1.37     & 1.87     & 10.0     \\
+	\end{bmatrix}
+$$
+
+获得解码器的输出之后，我们将其送入线性层和 softmax 层，线性层将生成一个 logit 向量，其大小等于原句中的词汇量，
+然后，将 softmax 函数应用于 logit 向量，从而得到概率分布，最后对其进行采样得到最终的文本输出。
+\begin{figure}[H]
+    \centering
+    % 第一行
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/9-4-1.pdf}
+        \caption{t = 1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/9-4-2.pdf}
+        \caption{t = 2}
+    \end{subfigure}
+
+    \vspace{0.5cm} % 行间距
+
+    % 第二行
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/9-4-3.pdf}
+        \caption{t = 3}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/9-4-4.pdf}
+        \caption{t = 4}
+    \end{subfigure}
+
+    \caption{解码器流程说明}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.7\textwidth, keepaspectratio]{9-3.pdf}
+	\caption{Transformer总结构}
+\end{figure}
+
+

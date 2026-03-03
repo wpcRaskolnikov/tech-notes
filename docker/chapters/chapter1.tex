@@ -1,0 +1,98 @@
+\section{Docker Engine}
+\subsection{介绍}
+Docker Engine由dockerd（Docker Daemon）、containerd、containerd-shim和runc这几个关键模块组成。
+\begin{itemize}
+	\item dockerd：负责接收 CLI 或 API 请求，功能包括管理镜像、身份验证和网络等，
+	客户端与 Docker daemon 之间通过 本地 Unix Socket 通信，路径为：\verb|/var/run/docker.sock|。
+	\item containerd：以daemon的方式运行，负责容器的生命周期管理，但它并不创建容器，只是将Docker镜像转换为OCI bundle。
+	\item runc：runc是OCI容器运行时规范的参考实现，只负责创建容器。
+	\item shim：每次创建容器时都会fork出一个新的runc实例，不过，一旦容器创建完毕，对应的runc进程就会退出，
+	此时，相关联的shim进程就会成为容器的父进程，保证容器在 containerd/dockerd 崩掉时仍可继续运行，每个容器有独立的 shim 进程。
+\end{itemize}
+
+如果使用 systemd ，dockerd 的日志会被写入 journald，\verb|journalctl -u docker.service|命令可以查看日志。
+如果需要调整守护进程的日志级别，可以编辑配置文件 daemon.json，启用调试模式并设置日志级别，例如：
+\begin{verbatim}
+	{
+		"debug": true,
+		"log-level": "debug"
+	}
+\end{verbatim}
+其中 log-level 可选的值包括：debug、info、warn、error、fatal。
+至于容器级别的日志，可以通过命令查看：\verb|docker container logs <container>|。
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llllll}
+		image  &  container & network  & volume   \\
+		ls & rm & inspect & ps  & prune   & create \\
+	\end{tabular}
+	\caption{docker常用命令}
+\end{table}
+
+\subsection{镜像}
+在 Docker 中，镜像是由若干松耦合的只读层（image layers） 组成的。我们可以通过以下方式了解镜像信息：
+\begin{itemize}
+	\item 使用 docker image inspect <image> 可以查看镜像的分层结构。
+	\item 使用 docker search --filter "is-official=true" <repo> 查找官方仓库中的镜像。
+	\item 使用 docker image prune -a 可以移除所有没有被使用的镜像。
+\end{itemize}
+镜像在推送（push）和拉取（pull） 的过程中，为了节省网络带宽，会对镜像层进行压缩。
+由于压缩会改变二进制内容，因此，为了校验，Docker 为每个镜像层同时维护一个分发散列值（Distribution Hash），
+这是压缩后镜像文件的哈希。
+
+本地镜像数据通常存储在：\verb|/var/lib/docker/<storage-driver>|，此外，镜像有两种常见的标识方式：
+IMAGE ID和Digest，前者是本地镜像的唯一标识符，只在本地主机中有意义，后者是镜像内容的整体哈希。
+
+\subsection{容器}
+在 Docker 中启动容器可以有多种方式，具体取决于你希望容器以何种方式运行：
+\begin{itemize}
+	\item 默认启动镜像中配置的应用：\verb|docker container run <image> <app>|。
+	\item 进入交互式 shell：\verb|docker container run -it <image> /bin/bash|。
+	\item 后台运行容器：\verb|docker container run -d --name <name> -p <host>:<container>|。
+\end{itemize}
+
+容器的生命周期与其主进程（PID=1）绑定。当容器内的主进程退出时，容器也会随之终止。
+在与容器交互时，按下 Ctrl+P Q 组合键可以将终端“分离”，但容器本身不会停止。
+你可以通过以下命令再次进入容器，开启一个新的 shell：
+\verb|docker container exec -it <name> bash|。
+
+为了在服务异常时保持容器的高可用性，建议在运行容器时配置合适的重启策略：
+\begin{itemize}
+	\item always：无论因为什么原因停止，Docker 都会尝试重启容器。唯一的例外是容器被显式停止（docker container stop）。
+	注意：当 Docker daemon 重启时，所有处于停止状态的容器也会被尝试重启。
+	\item unless-stopped：与 always 类似，但如果容器被手动停止（docker stop），即使 daemon 重启，容器也不会再自动拉起。
+	\item on-failure[:max-retries]：当容器因错误退出（退出码 != 0）时，Docker 才会尝试重启。
+\end{itemize}
+
+\subsection{网络}
+容器网络模型（Container Network Model，CNM）定义了 Docker 网络架构的基础组成要素。
+Libnetwork 作为具体实现，负责提供控制层和管理层功能，而网络驱动（Driver）则承担数据层的实现。
+Docker 已经封装了若干内置驱动，在 Linux 包括 Bridge、Overlay 和 Macvlan 等。
+
+在每台 Docker 主机上，都会自动创建一个默认的单机桥接网络。在 Linux 系统中，该网络名称为 bridge，对应宿主机上的虚拟网桥 docker0。
+\verb|docker network inspect <name>|命令可以查看网络的详细信息。
+
+值得注意的是，Docker为容器提供DNS解析功能，不过默认的 bridge 网络并不支持通过 Docker 内置的 DNS 服务进行容器名称解析。
+DNS 服务器会记录容器在启动时通过 --name 或 --net-alias 参数指定的名称与容器 IP 地址之间的映射关系，从而实现基于名称的访问。
+
+Docker 内置的 Macvlan 驱动 可以让容器直接接入宿主机所在的物理网络，使其表现得像一台独立的主机。
+要使用该驱动，宿主机网卡需要启用 混杂模式（promiscuous mode）。
+例如，假设需要将容器加入到 VLAN 100 中，可以创建一个基于 Macvlan 的网络：
+\begin{verbatim}
+	docker network create -d macvlan \
+	--subnet=10.0.0.0/24 --ip-range=10.0.00/25 \
+	--gateway=10.0.0.1 -o parent=eth0.100 macvlan100
+\end{verbatim}
+
+\subsection{存储}
+非持久化存储的目录在\verb|/var/lib/docker/<storage-driver>/|下，是容器的一部分，一般使用Overlay2 驱动。
+要持久化数据要使用卷，默认情况下，Docker创建新卷时采用内置的local 驱动，创建的新卷在\verb|/var/lib/docker/volumes|目录下。
+下面的命令创建一个新的独立容器，并挂载一个名为bizvol 的卷：
+\begin{verbatim}
+	docker container run -dit --name voltainer \
+	--mount source=bizvol,target=/vol alpine
+\end{verbatim}
+如果指定了已经存在的卷，Docker会使用该卷，否则Docker会新创建一个卷，要注意的是即使容器被删除，卷依旧存在。
+
+

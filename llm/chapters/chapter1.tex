@@ -1,0 +1,61 @@
+\section{大模型时代的数据规模}
+\href{https://epoch.ai/data/ai-models}{数据规模}
+pytorch在执行GPU上的运算时，是异步的，如果需要GPU计算的结果，
+需要调用@torch.cuda.synchronize()@来强制同步。
+如果需要随机数生成的结果可复现，需要设置随机数种子。
+\begin{code}
+\begin{verbatim}
+def set_seed(seed: int = 37) -> None:
+    np.random.seed(seed)
+    random.seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    print(f"Random seed set to: {seed}")
+\end{verbatim}
+\end{code}
+
+GPU锁频：
+\begin{code}
+\begin{verbatim}
+nvidia-smi --query-gpu=pstate,clocks.mem,clocks.sm,clocks.gr --format=csv
+nvidia-smi --query-supported-clocks=gpu_name,mem,gr --format=csv
+sudo nvidia-smi -pm 1
+nvidia-smi -ac 8001,2100
+\end{verbatim}
+\end{code}
+
+CPU锁频：
+\begin{code}
+\begin{verbatim}
+sudo apt install cpufrequtils
+
+cpufreq-info
+# 设置最大最小频率
+sudo cpufreq-set -r -g performance
+sudo cpufreq-set -r -d 2.1Ghz
+sudo cpufreq-set -r -u 2.1Ghz
+\end{verbatim}
+\end{code}
+
+测量程序运行时间
+\begin{code}
+\begin{verbatim}
+time.perf_counter() //单位为s
+
+torch.cuda.synchronize()
+start=torch.cuda.Event(enable_timing=True)
+end=torch.cuda.Event(enable_timing=True)
+
+start.record()
+# 运行代码
+end.record()
+torch.cuda.synchronize()
+
+print(f"{start.elapsed_time(end)}ms")
+\end{verbatim}
+\end{code}

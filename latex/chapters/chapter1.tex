@@ -1,0 +1,66 @@
+\section{文档结构}
+\LaTeX 命令（宏）的格式为@\command[<arg_opt>]{arg1}{arg2}@,
+@\begin{document}@之前的部分被称作导言区（preamble），导言区内还能自定义环境和命令。
+
+\begin{code}[title=导言区示例]
+	\begin{verbatim}
+	\documentclass[UTF8]{ctexart} % 如果英文占主体，更建议使用\usepackage{ctex}
+	\usepackage{geometry}
+	\geometry{a6paper,centering,scale=0.8} % a6纸、版心居中、长宽占页面的0.8
+
+	\usepackage[format=hang,font=small,texfont=it]{caption} % 图表标题悬挂对齐
+	\usepackage[nottoc]{tocbibind} % 增加参考文献、索引等目录项
+
+	\title{\heiti 杂谈勾股定理} % 声明黑体标题
+	\author{\kaishu 张三} % 声明楷书作者
+	\date{\today} % 声明日期
+
+	\newenvironment{myquote} % 自定义环境
+		{\begin{quote}\kaishu\zihao{-5}}
+		{\end{quote}}
+	\newtheorem{envname}{caption} % 定义定理环境
+	\newcommand{\cmd}{def} % 自定义命令
+
+	\bibliographystyle{plain} % 声明参考文献格式
+	\end{verbatim}
+\end{code}
+\begin{code}[title=正文示例]
+	\begin{verbatim}
+	\begin{document}
+	\maketitle % 排版标题、作者和日期，如果需要复杂的格式，可以试试titling宏包
+	\tableofcontents % 排版目录，依靠.toc目录文件
+
+	% 正文内容
+
+	\bibliography{math,springer} % 打印文献列表
+	\end{document}
+	\end{verbatim}
+\end{code}
+
+在文档中，可以通过 @\label{}@ 定义标签，然后使用不同的命令进行引用：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item @\ref{}@：引用标签对应的编号（如章节、图表、公式等）。
+	\item @\pageref{}@：引用标签所在的页码。
+\end{itemize}
+
+如果引用图表，建议使用 \emph{hyperref} 宏包提供的 @\autoref{}@ 命令，
+它会自动添加图、表、章节等前缀；引用数学公式，则可使用 \emph{amsmath} 宏包的 @\eqref{}@ 命令；
+若需要引用标题内容，可使用 \emph{nameref} 宏包提供的同名命令。
+这些引用功能通常依赖 LaTeX 编译生成的 .aux 文件。
+
+关于超链接，hyperref 宏包提供了丰富的功能，超链接信息通常保存在 .out 文件中：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item @\url{}@：排版并显示 URL。
+	\item @\href{URL}{Text}@：制作带文字的超链接。
+	\item @\path{}@：排版文件路径，通常用于代码或文件目录展示。
+	\item @\hyperref[label]{Text}@：制作跳转到指定标签的超链接。
+	\item @\hypertarget{name}{Text}@ 与 @\hyperlink{name}{Text}@：配合使用可创建跳转目标与跳转链接。
+\end{itemize}
+
+参考文献的引用使用 @\cite{}@ 命令，只有被引用的文献会出现在文献列表中；
+如果希望列出所有文献，可以使用 @\nocite{*}@ 命令。若需要定制参考文献样式，可以考虑使用 \emph{natbib} 宏包。
+索引可通过 \emph{makeidx} 宏包制作，词汇表则可使用 \emph{glossaries} 宏包生成。
+
+在 \LaTeX 中，脚注可以使用 @\footnote{Text}@ 命令生成，默认情况下每章会重新编号。
+如果需要自定义脚注编号或样式，可以使用 \emph{footmisc} 宏包。
+如果希望在页面边缘添加注释，可以使用 @\marginpar{Text}@ 命令，并结合 \emph{marginnote} 宏包进行更灵活的排版控制。

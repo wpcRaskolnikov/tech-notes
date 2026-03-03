@@ -1,0 +1,196 @@
+\section{标准库}
+\subsection{模块}
+在浏览器中，可以通过 <script type="module"> 来启用模块支持。
+JavaScript 的模块导出主要有两种形式：命名导出（named exports） 和 默认导出（default exports）。
+这两种方式在导入时对应的语法也不同，除了静态导入之外，JavaScript 还提供了动态导入，可实现按需加载或异步加载模块。
+
+此外，模块还支持再导出（re-export），可以将多个文件的导出集中整合到一个入口文件中，
+类似于 C 语言中的头文件，用于简化模块的统一管理和引用。
+\begin{verbatim}
+    // 命名导出
+    export function f() { ... }
+    export const pi = 3.14;
+    // 导入命名导出
+    import {f, pi} from 'module';
+
+    // 默认导出
+    export default function() { ... }
+    // 导入默认导出
+    import anyName from 'module';
+
+    // 动态导入
+    import('module').then(module => { ... });
+
+    // 再导出
+    export {f, pi} from 'module';
+\end{verbatim}
+
+在JavaScript模块中，import.meta这个特殊语法引用一个对象，这个对象包含当前执行模块的元数据。
+其中，这个对象的url属性是加载模块时使用的URL（在Node中是file://URL）。
+import.meta.url的主要使用场景是引用与模块位于同一目录下的图片、数据文件或其他资源。
+\begin{verbatim}
+    const imageUrl = new URL('./image.png', import.meta.url);
+\end{verbatim}
+
+\subsection{迭代器与生成器}
+\subsubsection{迭代器}
+在 JavaScript 中，迭代器本质上是一个对象，该对象必须实现一个 next() 方法，
+每次调用都会返回一个迭代结果对象（IteratorResult），
+迭代结果对象包含两个属性：value：当前迭代的值；done：一个布尔值，表示迭代是否结束。
+若要让一个类可迭代，必须实现一个名为 Symbol.iterator 的方法，并返回一个迭代器对象。
+此外，迭代器还可以定义 return() 方法，用于在迭代提前结束时执行清理操作，该方法需要返回一个迭代结果对象。
+\begin{verbatim}
+    class Range {
+        constructor(start, end) {
+            this.start = start;
+            this.end = end;
+        }
+        [Symbol.iterator]() {
+            let current = this.start;
+            const end = this.end;
+            return {
+                next() {
+                    if (current <= end) {
+                        return { value: current++, done: false };
+                    } else {
+                        return { value: undefined, done: true };
+                    }
+                }
+
+                // 使迭代器本身也是可迭代的
+                [Symbol.iterator]() {
+                    return this;
+                }
+            };
+        }
+    }
+\end{verbatim}
+
+\subsubsection{生成器}
+在 JavaScript 中，生成器函数 使用 function* 定义。
+调用生成器函数时，并不会立即执行函数体，而是返回一个生成器对象。
+只有在调用生成器对象的 next() 方法时，函数体才会从当前位置开始执行，直到遇到 yield 语句为止。
+yield 表达式产生的值会作为 next() 返回结果对象中的 value。
+同时，yield 表达式本身的值，则由调用 next() 时传入的参数决定。
+
+生成器函数还可以使用 yield* 语句，将迭代过程委托给另一个可迭代对象，实现嵌套迭代。
+此外，生成器函数也可以显式返回一个值，该返回值会出现在迭代结束时 next() 方法返回结果对象的 value 属性中。
+\begin{verbatim}
+    class Range {
+        *[Symbol.iterator]() {
+            for (let current = this.start; current <= this.end; current++) {
+                yield current;
+            }
+        }
+    }
+\end{verbatim}
+
+\subsection{异步编程}
+回调函数是最基本的异步编程方式，通过将一个函数作为参数传递给另一个函数，
+当异步操作完成时，调用该回调函数来处理结果。
+setTimeout()、setInterval()和各种事件注册函数是常见的基于回调的异步函数。
+
+另一种实现异步的方式是使用 返回 Promise 对象的函数。
+Promise 构造函数接受一个函数作为参数，该函数本身接收两个函数参数：resolve 和 reject。
+当异步操作成功时调用 resolve(value) 返回结果，当异步操作失败时调用 reject(Error) 返回错误。
+也可以使用 Promise.resolve(value) 或 Promise.reject(Error) 来快速创建 Promise 对象。
+
+使用 Promise 可以通过链式调用 .then() 和 .catch() 来处理异步结果和错误：
+两者都返回一个新的 Promise 对象，支持链式调用。
+如果需要并行执行多个异步操作，可以使用 Promise.all()，该函数接收一个包含多个 Promise 对象的数组并返回一个新的 Promise，
+当所有 Promise 都成功时，该 Promise 解析为一个包含所有结果的数组；如果任意一个 Promise 被拒绝，该 Promise 会立即拒绝，返回第一个失败的原因
+类似的函数还有Promise.allSettled()、Promise.race()和Promise.any()。
+
+将函数声明为 async 意味着该函数的返回值会被自动包装成一个 Promise。
+需要注意的是，await 关键字不会阻塞整个程序的执行，
+它只能在使用 async 声明的函数内部使用，用于等待 Promise 的结果。
+
+由于Promise只适合单次运行的异步计算，JavaScript提供了for/await循环，用于迭代异步迭代器。
+异步可迭代对象实现了Symbol.asyncIterator()方法，该方法返回一个异步迭代器对象，其next()方法返回一个Promise。
+异步生成器函数使用async function*定义，可以在函数体内使用await和yield。
+
+\subsection{元编程}
+\subsubsection{属性描述符}
+在 JavaScript 中，对象的属性具有四个内部特性，
+数据属性包括：value、writable、enumerable和 configurable；
+访问器属性则由：get、set、enumerable 和 configurable 组成。
+这些特性通过一个称为 属性描述符（property descriptor） 的对象来表示。
+可以使用 Object.getOwnPropertyDescriptor() 获取某个自有属性的属性描述符；
+使用 Object.defineProperty() 可以定义或修改属性的描述符。
+\begin{verbatim}
+    const o = { a: 1 };
+    const descriptor = Object.getOwnPropertyDescriptor(o, 'a');
+    console.log(descriptor);
+    // { value: 1, writable: true, enumerable: true, configurable: true }
+    Object.defineProperty(o, 'b', {
+        value: 2,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+\end{verbatim}
+
+此外，JavaScript 还提供了三种方法来限制对象的可变性：
+Object.preventExtensions()：禁止为对象添加新属性；
+Object.seal()：在 preventExtensions 的基础上，同时将现有属性标记为不可配置；
+Object.freeze()：在 seal 的基础上，再将所有数据属性标记为不可写。
+这三种方法作用逐级递进，使对象的结构和属性逐步变得更加固定与不可更改。
+
+\subsubsection{Symbol}
+\begin{itemize}
+	\item Symbol.iterator和Symbol.asyncIterator符号可以让对象变成可迭代对象。
+	\item Symbol.species符号可以指定派生对象的构造函数。
+	\item Symbol.hasInstance符号可以自定义instanceof运算符的行为。
+	\item Symbol.toStringTag、Symbol.toPrimitive、Symbol.isConcatSpreadable符号可以控制对象在Object.prototype.toString()、valueOf()、Array.prototype.concat()中的行为。
+	\item Symbol.match、Symbol.replace、Symbol.search和Symbol.split符号可以自定义字符串方法的行为。
+\end{itemize}
+
+\subsubsection{Reflect}
+Reflect 对象提供了一组静态方法，用于模拟核心语言语法的行为。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\textbf{常规语法}                                   & \textbf{Reflect API}                             \\
+		\verb|o[name]|                                  & \verb|Reflect.get(o, name)|                      \\
+		\verb|o[name] = value|                          & \verb|Reflect.set(o, name, value)|               \\
+		\verb|delete o[name]|                           & \verb|Reflect.deleteProperty(o, name)|           \\
+		\verb|name in o|                                & \verb|Reflect.has(o, name)|                      \\
+		\verb|Object.defineProperty(o, name, desc)|     & \verb|Reflect.defineProperty(o, name, desc)|     \\
+		\verb|Object.getOwnPropertyDescriptor(o, nm)| & \verb|Reflect.getOwnPropertyDescriptor(o, nm)| \\
+		\verb|Object.getPrototypeOf(o)|                 & \verb|Reflect.getPrototypeOf(o)|                 \\
+		\verb|Object.setPrototypeOf(o, proto)|          & \verb|Reflect.setPrototypeOf(o, proto)|          \\
+		\verb|Object.preventExtensions(o)|              & \verb|Reflect.preventExtensions(o)|              \\
+		\verb|Object.isExtensible(o)|                   & \verb|Reflect.isExtensible(o)|                   \\
+		\verb|Object.keys(o)|（部分行为）                     & \verb|Reflect.ownKeys(o)|                        \\
+		\verb|func.apply(o, args)|                & \verb|Reflect.apply(func, o, args)|        \\
+		\verb|new Target(...args)|                      & \verb|Reflect.construct(Target, args)|           \\
+	\end{tabular}
+\end{table}
+
+\subsubsection{Proxy}
+Proxy 对象用于创建一个对象的代理，创建 Proxy 需要两个参数：目标对象（target）和处理程序对象（handler），代理对象支持的操作就是反射API定义的那些操作。
+设p是一个代理对象，当使用delete操作符删除代理对象上的一个属性时，代理对象会在处理器对象上查找deleteProperty()方法。
+如果处理器对象上不存在对应方法，则代理就在目标对象上执行基础操作。
+
+如果处理器对象是空的，那代理本质上就是目标对象的一个透明包装器，
+透明包装器在创建“可撤销代理”时有用，创建可撤销代理一般不使用Proxy()构造函数，而要使用Proxy.revocable()工厂函数。
+这个函数返回一个对象，其中包含代理对象和一个revoke()函数。一旦调用revoke()函数，代理立即失效。
+\begin{verbatim}
+    const handler = {
+        get(target, prop, receiver) {
+            console.log(`Getting property ${prop}`);
+            return Reflect.get(target, prop, receiver);
+        },
+        set(target, prop, value, receiver) {
+            console.log(`Setting property ${prop} to ${value}`);
+            return Reflect.set(target, prop, value, receiver);
+        }
+    }; 
+    const target = { a: 1, b: 2 };
+    const proxy = new Proxy(target, handler);
+    console.log(proxy.a); // Getting property a \n 1
+    proxy.b = 3;          // Setting property b to 3
+\end{verbatim}
+
+
+

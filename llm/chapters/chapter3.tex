@@ -1,0 +1,120 @@
+\section{特型与泛型}
+\subsection{泛型}
+在Rust中，@&mut dyn Write@表示实现了Write特型的任意类型值的可变引用。
+dyn Write被称为特型对象，Rust会在需要时自动将普通引用转换为特型对象，而且创建特型对象只能通过这种转换。
+
+在实际项目中，如果你需要一个混合类型的集合（例如一个 Vec 中存放不同类型的值），通常就需要使用特征对象；
+其他情况下，使用泛型一般是更好的选择。
+Rust中还有一个impl Trait特性，可以把impl Iterator<Item=u8>当一个类型来使用。
+
+\begin{code}[title=特型实现]
+	\begin{verbatim}
+    impl TraitName for Type { 
+    // 只能实现 TraitName 中声明的方法
+    }
+    
+    impl Type { 
+    // 辅助函数可以写在这
+    }
+
+    // 子特型定义方法一
+    trait Creature: Visible {
+    }
+    // 子特型定义方法二
+    trait Creature where Self: Visible { 
+    }
+
+    trait Iterator {
+        type item; // 关联类型，用来表示 next 的返回值类型
+        fn next(&nut self) -> Option<Self::Item>;
+    }
+    \end{verbatim}
+\end{code}
+
+\subsection{运算符重载}
+在Rust中，表达式@a + b@实际上是@a.add(b)@的简写形式。其他需要注意的是：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item @!@ 对 bool 类型表示逻辑取反，对整数类型表示按位取反。
+	\item @+@ 的左操作数不能是 @&str@。
+	\item @PartialEq@ 中的 @ne@ 方法有默认实现，只需要实现 @eq@ 方法即可，可以自动派生。
+	\item @x == x@ 不一定总为真（比如NaN），如果需要保证自反性，则应实现 @Eq@ 特型，可以自动派生。
+	\item @PartialOrd@ 需要实现的方法是@partial_cmp@，它返回@Option<Ordering>@，用于部分排序。
+	\item 如果需要全排序，可以实现 @Ord@ 特型，它继承自 @Eq@。
+\end{itemize}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{Trait}           & \textbf{Operator}              \\
+		\hline
+		@std::ops::Neg@          & @-x@                           \\
+		@std::ops::Not@          & @!x@                           \\
+		\hline
+		@std::ops::Add@          & @x + y@                        \\
+		@std::ops::Sub@          & @x - y@                        \\
+		@std::ops::Mul@          & @x * y@                        \\
+		@std::ops::Div@          & @x / y@                        \\
+		@std::ops::Rem@          & \verb|x % y|                   \\
+		\hline
+		@std::ops::BitAnd@       & \verb|x & y|                   \\
+		@std::ops::BitOr@        & @x | y@                        \\
+		@std::ops::BitXor@       & @x ^ y@                        \\
+		@std::ops::Shl@          & @x << y@                       \\
+		@std::ops::Shr@          & @x >> y@                       \\
+		\hline
+		@std::ops::AddAssign@    & @x += y@                       \\
+		@std::ops::SubAssign@    & @x -= y@                       \\
+		@std::ops::MulAssign@    & @x *= y@                       \\
+		@std::ops::DivAssign@    & @x /= y@                       \\
+		@std::ops::RemAssign@    & \verb|x %= y|                  \\
+		@std::ops::BitAndAssign@ & \verb|x &= y|                  \\
+		@std::ops::BitOrAssign@  & @x |= y@                       \\
+		@std::ops::BitXorAssign@ & @x ^= y@                       \\
+		@std::ops::ShlAssign@    & @x <<= y@                      \\
+		@std::ops::ShrAssign@    & @x >>= y@                      \\
+		\hline
+		@std::ops::Index@        & @x[y]@                         \\
+		@std::ops::IndexMut@     & @x[y] = z@                     \\
+		\hline
+		@std::cmp::PartialEq@    & @x == y, x != y@               \\
+		@std::cmp::PartialOrd@   & @x < y, x > y, x <= y, x >= y@ \\
+		\hline
+	\end{tabular}
+	\caption{Rust 运算符重载特型}
+\end{table}
+
+\subsection{实用工具特型}
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|l|p{24em}|}
+		\hline
+		\textbf{Trait}                      & \textbf{Description}         \\
+		\hline
+		@std::ops::Drop@                    & 提供对象销毁时的自定义行为，类似析构函数。        \\
+		@std::marker::Sized@                & 标记类型在编译时大小已知，用于泛型约束。         \\
+		@std::fmt::Debug@                   & 用于格式化输出调试信息，通常用于@{:?}@占位符。   \\
+		@std::fmt::Display@                 & 用于用户可读的格式化输出，通常用于@{}@占位符。    \\
+		@std::clone::Clone@                 & 实现值的显式深拷贝。                   \\
+		@std::marker::Copy@                 & 标记类型可按位复制，一般用于小型标量类型。        \\
+		@std::default::Default@             & 提供默认值，通过 @::default()@ 获取实例。 \\
+		@std::ops::Deref@ 和 @DerefMut@      & 提供解引用操作 @*@，允许自定义智能指针行为。     \\
+		@std::borrow::Borrow@ 和 @BorrowMut@ & 用于借用转换，常用于哈希表或集合中。           \\
+		@std::borrow::AsRef@ 和 @AsMut@      & 提供将类型引用转换为另一种引用的通用方法。        \\
+		@std::convert::From@ 和 @Into@       & 提供类型转换方法。                    \\
+		@std::convert::TryFrom@ 和 @TryInto@ & 提供可失败类型转换方法。                 \\
+		@std::borrow::ToOwned@              & 用于从借用数据创建拥有权类型。              \\
+		\hline
+	\end{tabular}
+	\caption{Rust 常用实用工具特型及其描述}
+\end{table}
+需要注意的是：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item @Drop@ 中的 @drop@ 方法只能被隐式调用，且 @Drop@ 与 @Copy@ 不能同时实现。
+	\item @Sized@ 是 Rust 中的隐式默认约束，如果希望类型可以不确定大小，需要显式写为 @T: ?Sized@。
+	\item 在泛型代码中，优先使用 @clone_from@ 来减少 @clone@ 产生的不必要的空间分配和释放。
+	\item 实现了 @Deref@ 的类型在使用时会被隐式解引用，但隐式解引用不会自动满足类型约束。
+	\item 如果类型 @T@ 实现了 @Default@，那么 @Rc<T>@、@Cow<T>@ 等包装类型也会自动实现 @Default@；
+	      元组若所有元素都实现了 @Default@，则元组也自动实现；结构体则需要使用 @#[derive(Default)]@ 来生成默认实现。
+	\item 给定了 @From@ 实现后，标准库会自动为对应类型生成 @Into@ 实现。
+\end{itemize}

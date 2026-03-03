@@ -1,0 +1,51 @@
+\section{内网穿透}
+\begin{code}[title=Rathole Service]
+	\begin{verbatim}
+sudo vim /etc/systemd/system/ratholes.service
+
+[Unit]
+Description=Rathole Server Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=1048576
+
+# with root
+ExecStart=/usr/bin/rathole -s /etc/rathole/rathole.toml
+# without root
+# ExecStart=%h/.local/bin/rathole -s %h/.local/etc/rathole/rathole.toml
+
+[Install]
+WantedBy=multi-user.target
+    \end{verbatim}
+\end{code}
+
+\begin{code}[title=Rathole Toml]
+	\begin{verbatim}
+sudo mkdir -p /etc/rathole/rathole.toml
+
+# server.toml
+[server]
+bind_addr = "0.0.0.0:2333" # `2333` 配置了服务端监听客户端连接的端口
+
+[server.services.my_nas_ssh]
+token = "use_a_secret_that_only_you_know" # 用于验证的 token
+bind_addr = "0.0.0.0:5202" # `5202` 配置了将 `my_nas_ssh` 暴露给互联网的端口
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable ratholes
+sudo systemctl start  ratholes
+
+
+# client.toml
+[client]
+remote_addr = "myserver.com:2333" # 服务器的地址。端口必须与 `server.bind_addr` 中的端口相同。
+[client.services.my_nas_ssh]
+token = "use_a_secret_that_only_you_know" # 必须与服务器相同以通过验证
+local_addr = "127.0.0.1:22" # 需要被转发的服务的地址
+    \end{verbatim}
+\end{code}

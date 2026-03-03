@@ -1,0 +1,68 @@
+\section{容器部署}
+\subsection{镜像构建}
+Dockerfile 文件指导镜像构建，内容类似这样：
+\begin{verbatim}
+	FROM node
+	LABEL maintainer "test@mail.com"
+	ADD . /src
+	WORKDIR /src
+	RUN npm install --production && npm run build
+	EXPOSE 8080
+	ENTRYPOINT ["npm","start"]
+\end{verbatim}
+之后可以构建镜像和推送到hub:
+\begin{verbatim}
+	docker image build -t <image-name> .
+	docker image tag <current-tag> <docker-id>/<current-tag>
+	docker image push <docker-id>/<current-tag>
+\end{verbatim}
+为了精简镜像大小，可以使用多阶段构建，例如：
+\begin{verbatim}
+	FROM node:latest AS storefront
+	...
+	FROM maven:latest AS appserver
+	...
+	FROM java:8-jdk-alpine AS production
+	...
+	COPY --from=storefront /usr/src/atsea/app/react-app/build/ .
+	WORKDIR /app
+	COPY --from=appserver /usr/src/atsea/target/AtSea-0.0.1-SNAPSHOT.jar .
+	...
+\end{verbatim}
+重点是\verb|COPY --from|指令，仅复制生产环境相关的应用代码。
+
+\subsection{Docker Compose}
+多数的现代应用通过多个更小的服务互相协同来组成一个完整可用的应用，
+比如一个应用可能由4个服务组成：Web前端、订单管理、品类管理、后台数据库。
+部署和管理繁多的服务是困难的，而这正是Docker Compose要解决的问题。
+
+Docker Compose使用YAML文件来定义多服务的应用。YAML是JSON的一个子集，因此也可以使用JSON。示例文件：
+\begin{verbatim}
+    version: "3.8"
+    services:
+        web-fe:
+            build: .
+            command: python app.py
+            ports:
+                - target: 5000
+                published: 5000
+            networks:
+                - counter-net
+            volumes:
+                - type: volume
+                source: counter-vol
+                target: /code
+        redis:
+            image: "redis:alpine"
+            networks:
+                counter-net:
+
+    networks:
+        counter-net:
+
+    volumes:
+        counter-vol:
+\end{verbatim}
+
+启动应用命令是\verb|docker-compose up|，使用-d 参数在后台启动应用，
+默认使用文件名docker-compose.yml，也能用-f参数指定其他文件。

@@ -1,0 +1,48 @@
+\section{性能分析}
+\begin{code}
+\begin{verbatim}
+import torch
+import torchvision.models as models
+from torch.profiler import profile, record_function, ProfilerActivity
+
+model = models.resnet18().cuda()
+inputs = torch.randn(5, 3, 224, 224, device="cuda")
+
+with profile(
+    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+    profile_memory=True,
+) as prof:
+    with record_function("model_inference"):
+        model(inputs)
+
+prof.export_chrome_trace("trace.json")
+print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+\end{verbatim}
+\end{code}
+
+\href{https://ui.perfetto.dev}{perfetto trace viewer}，如果需要比Pytorch Profiler更底层的GPU性能分析，
+可以考虑使用 Nsight Compute。如果需要CPU性能分析，可以尝试Py-Spy和strace。for-loop，for-each和fuse
+
+设置参数，拒绝PyTorch分配大显存给小参数。
+\begin{code}
+\begin{verbatim}
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+\end{verbatim}
+\end{code}
+
+\begin{code}
+\begin{verbatim}
+import torch
+
+torch.cuda.memory._record_memory_history()
+
+with torch.inference_mode():
+    shape = [156, 1024, 1024, 1]
+    x1 = torch.randn(shape, device="cuda:0")
+    x2 = torch.randn(shape, device="cuda:0")
+    y = x1 * x2
+
+torch.cuda.memory._dump_snapshot("vram_profile.pickle")
+\end{verbatim}
+\end{code}
+\href{https://pytorch.org/memory_viz}{PyTorch Memory Visualization}

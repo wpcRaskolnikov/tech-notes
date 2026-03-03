@@ -1,0 +1,112 @@
+\section{Shell编辑}
+\subsection{快捷键}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{快捷键}   & \textbf{说明}      \\
+		\hline
+		Ctrl + T       & 打开新标签页。         \\
+		\hline
+		Ctrl + W       & 关闭标签页。         \\
+		\hline
+		Ctrl + L        & 跳转地址栏。     \\
+		\hline
+		Ctrl + Tab        & 切换标签页。     \\
+		\hline
+	\end{tabular}
+	\caption{浏览器 常用快捷键}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{快捷键}   & \textbf{说明}      \\
+		\hline
+		Ctrl + a       & 移动光标到行首。         \\
+		\hline
+		Ctrl + e       & 移动光标到行尾。         \\
+		\hline
+		Alt + f        & 将光标向前移动一个单词。     \\
+		\hline
+		Alt + b        & 将光标向后移动一个单词。     \\
+		\hline
+		Ctrl + k(kill) & 剪切从光标位置到行尾的内容。   \\
+		\hline
+		Ctrl + y(yank) & 粘贴最近删除的内容。       \\
+		\hline
+		Ctrl + l       & 清屏，相当于执行clear命令。 \\
+		\hline
+		Ctrl + r       & 反向搜索历史命令。        \\
+		\hline
+	\end{tabular}
+	\caption{Bash 常用快捷键}
+\end{table}
+
+\subsection{通配符}
+注意通配符是shell处理的，而不是命令处理的。
+*并不会匹配以.开头的文件，要匹配这些文件需要使用.[!.]*。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|p{7cm}|}
+		\hline
+		\textbf{通配符}           & \textbf{说明}                                        \\
+		\hline
+		\texttt{*}             & 匹配任意多个字符。                                          \\
+		\hline
+		\texttt{?}             & 匹配任意单个字符。                                          \\
+		\hline
+		\texttt{[characters]}  & 匹配方括号内的任意单个字符。                                     \\
+		\hline
+		\texttt{[!characters]} & 匹配不在方括号内的任意单个字符。                                   \\
+		\hline
+		\texttt{[[:class:]]}   & 匹配属于字符类的任意单个字符，字符类有alnum、alpha、digit、lower、upper等。 \\
+		\hline
+	\end{tabular}
+	\caption{常见通配符与说明}
+\end{table}
+
+\subsection{常用命令}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllllll}
+		alias    & bg     & bind & builtin & cd      & command & compgen \\
+		complete & disown & echo & enable  & exec    & exit    & export  \\
+		fc       & fg     & hash & help    & history & jobs    & kill    \\
+		logout   & printf & pwd  & type    & ulimit  & umask   & wait    \\
+	\end{tabular}
+	\caption{Bash 内置命令}
+\end{table}
+
+\begin{itemize}
+	\item 查找命令：apropos、dpkg -S。
+	\item 帮助命令：help、info、man、whatis、whereis、which。
+	\item 编辑命令：wc、head、tail、cut、grep、sort、uniq。
+	\item 输出重定向：\verb|> file 2>&1|相当于\verb|&> file|，|管道将命令的标准输出传给下一个命令的标准输入。
+	\item 输入重定向：cat读取文件到标准输出，tee读取标准输入并将其同时写入标准输出和文件中，xargs将标准输入转换为命令的参数。
+\end{itemize}
+
+\subsection{shell 扩展}
+参数扩展、算术扩展和命令替换仍然会在双引号中进行，但单引号中所有扩展均不能用。
+\begin{itemize}
+	\item 参数扩展：\verb|${var}|表示变量的值，\verb|${#var}|表示变量值的长度。
+	\item 算术扩展：\verb|$(( expression ))|，如\verb|echo $(( 3 + 5 ))|。
+	\item 命令替换：\verb|$( command )|，如\verb|echo "Today is $(date)"|。
+	\item 进程替换：\verb|<(cmd)|可以将命令的输出当成文件使用。
+	\item 路径名扩展：\verb|~/|表示用户主目录，\verb|~+|表示当前工作目录，\verb|~-|表示上一个工作目录。
+	\item 花括号扩展：\verb|{1..5}|表示生成1到5的数字序列，\verb|{a..e}|表示生成a到e的字母序列。
+	\item 历史扩展：\verb|!!|表示上一条命令，\verb|!n|表示第n条命令，\verb|!string|表示最近一条以string开头的命令，
+	      \verb|!?string|表示最近一条包含string的命令。如果你需要记录shell对话，可以使用\verb|script|命令。
+\end{itemize}
+
+\subsection{正则表达式}
+正则表达式中存在元字符（metacharacter）:\verb@. ? + * { } ^ $ [ ]  - ( ) | \@
+
+\subsection{历史记录}
+输出历史记录命令并执行：\verb|!-3:p|、\verb|!!|
+删除文件：先\verb|ls|，再\verb|rm !$|
+\verb|!$|表示前一个命令中的最后一个单词
+ctrl+r 搜索历史记录，esc退出搜索。
+如果你输入了错误的命令，可以运行\verb|^jg^jpg|来替换文本，注意只能替换第一次出现的字符串，
+也可以通过类似\verb|!!:s/jg/jpg/|的语法运行替换。

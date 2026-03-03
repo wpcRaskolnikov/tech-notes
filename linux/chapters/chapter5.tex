@@ -1,0 +1,104 @@
+\section{存储设备}
+\subsection{设备信息}
+文件系统表（file system tabl）/etc/fstab列出会在系统引导时挂载的各种设备（通常是硬盘分区）。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{字段} & \textbf{说明}                                          \\
+		\hline
+		设备          & 文本标签或随机生成的通用识别码（Universally Unique Identifier，UUID）。 \\
+		\hline
+		挂载点         & 设备挂载到的目录。                                            \\
+		\hline
+		文件系统类型      & 设备使用的文件系统类型，如 \verb|ext4|、\verb|swap|。               \\
+		\hline
+		挂载选项        & 挂载时的选项，如 \verb|defaults|、\verb|ro|、\verb|noexec|。    \\
+		\hline
+		转储频率        & 用于 \verb|dump| 命令的备份选项，通常为 0（不备份）或 1。                \\
+		\hline
+		自检顺序        & 用于 \verb|fsck| 的文件系统检查顺序：0=不检查，1=先检查，2=后检查。          \\
+		\hline
+	\end{tabular}
+	\caption{/etc/fstab 文件字段}
+\end{table}
+
+在 Linux 中，可以使用 mount 命令挂载文件系统，并通过 umount 命令卸载文件系统，
+命令仅对当前会话有效，如果需要开机自动挂载，得在/etc/fstab中写入内容。
+需要注意的是，音频 CD 与常见的 CD-ROM 光盘不同，音频 CD 本身不包含文件系统，因此无法像普通数据光盘那样直接挂载。
+另外，由于系统在读写设备时会使用缓冲区，如果在数据尚未写回设备之前没有执行卸载操作，直接移除或关闭设备，就可能导致数据丢失或损坏。
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|p{12cm}|}
+		\hline
+		\textbf{设备}         & \textbf{说明}                                                                  \\
+		\hline
+		\verb|/dev/lp*|     & 并行端口打印机设备。                                                                   \\
+		\hline
+		\verb|/dev/sd*|     & SCSI 磁盘及其分区。在现代 Linux 中，内核将所有类似磁盘的设备（如 SATA 硬盘、USB 闪存、数码相机等存储设备）都视为 SCSI 设备。
+		\verb|sda| 表示第一个磁盘，\verb|sda1| 是它的第一个分区，\verb|sdb| 是第二个磁盘，依此类推。                                    \\
+		\hline
+		\verb|/dev/nvmeNn*| & nvme磁盘及其分区，N是磁盘编号。                                                           \\
+		\hline
+		\verb|/dev/sr*|     & 光驱设备（CD-ROM/DVD）。                                                            \\
+		\hline
+		\verb|/dev/null|    & 空设备，写入数据会丢弃，读取返回 EOF。                                                        \\
+		\hline
+	\end{tabular}
+	\caption{/dev 下常见设备及说明}
+\end{table}
+
+\subsection{文件系统}
+
+\begin{code}[title=ISO Image]
+	\begin{verbatim}
+# 创建光盘映像文件（ISO）
+dd if=/dev/cdrom of=cd.iso						# (1)从已有 CD-ROM 光盘创建
+genisoimage -o cd-rom.iso -R -J ~/cd-rom-files	# (2)从目录生成 ISO 镜像
+
+# 校验 ISO 文件完整性
+md5sum /dev/cdrom
+md5sum image.iso
+
+# 刻录光盘
+wodim dev=/dev/cdrw blank=fast	# 擦除可重写光盘（CD-RW / DVD-RW）
+wodim dev=/dev/cdrw image.iso	# 刻录 ISO 文件到光盘
+
+# 挂载 ISO 镜像
+mkdir /mnt/iso_image
+mount -t iso9660 -o loop image.iso /mnt/iso_image
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=Disk Partitioning]
+	\begin{verbatim}
+lsblk				# 列出所有块设备
+umount /dev/sdb1	# 操作设备前先卸载（对分区）
+
+# 分区（对整个磁盘）
+sudo parted /dev/sdb
+mklabel gpt
+mkpart primary ext4 0% 100%
+
+sudo mkfs -t ext4 /dev/sdb1	# 格式化分区
+sudo fsck /dev/sdb1			# 检查并修复文件系统错误
+sudo blkid /dev/sdb1		# 查看分区UUID
+sudo mount /dev/sdb1 	# 挂载分区
+
+# 将配置写入 /etc/fstab
+UUID=<uuid> <mount_point> ext4 defaults 0 2
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=Swap分配]
+	\begin{verbatim}
+free -h
+swapon --show
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    \end{verbatim}
+\end{code}

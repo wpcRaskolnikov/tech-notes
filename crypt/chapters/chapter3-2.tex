@@ -1,0 +1,91 @@
+\subsection{AES}
+\subsubsection{AES简介}
+1997年1月，NIST开始在全世界征集DES替代算法，2001年10月，
+NIST宣布Rijndael算法为AES标准（Advanced Encryption Standard）。
+AES支持128位、192位和256位的密钥长度，分组长度为128位，加密多轮（10轮、12轮或14轮，取决于密钥长度）。
+AES中所有操作都以字节（8位）为单位，即所有运算在$GF(2^8)$上进行。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{3-4.pdf}
+	\caption{AES加密流程}
+\end{figure}
+
+\subsubsection{轮函数}
+AES的轮函数包括四个主要步骤（最后一轮没有列混合）：
+\begin{enumerate}
+    \item 字节代换（SubBytes）：使用S盒对每个字节进行非线性代换。
+    \item 行移位（ShiftRows）：输入分为四行，形成状态矩阵，每行进行循环左移（0，1，2，3字节）。
+    \item 列混合（MixColumns）：对状态矩阵每列进行线性变换。
+$$
+M =
+\begin{bmatrix}
+02 & 03 & 01 & 01 \\
+01 & 02 & 03 & 01 \\
+01 & 01 & 02 & 03 \\
+03 & 01 & 01 & 02
+\end{bmatrix}
+$$
+    \item 轮密钥加（AddRoundKey）：将当前轮的密钥与输入进行异或操作。
+\end{enumerate}
+
+$$
+S
+\begin{bmatrix}
+63 & 7C & 77 & 7B & F2 & 6B & 6F & C5 & 30 & 01 & 67 & 2B & FE & D7 & AB & 76 \\
+CA & 82 & C9 & 7D & FA & 59 & 47 & F0 & AD & D4 & A2 & AF & 9C & A4 & 72 & C0 \\
+B7 & FD & 93 & 26 & 36 & 3F & F7 & CC & 34 & A5 & E5 & F1 & 71 & D8 & 31 & 15 \\
+04 & C7 & 23 & C3 & 18 & 96 & 05 & 9A & 07 & 12 & 80 & E2 & EB & 27 & B2 & 75 \\
+09 & 83 & 2C & 1A & 1B & 6E & 5A & A0 & 52 & 3B & D6 & B3 & 29 & E3 & 2F & 84 \\
+53 & D1 & 00 & ED & 20 & FC & B1 & 5B & 6A & CB & BE & 39 & 4A & 4C & 58 & CF \\
+D0 & EF & AA & FB & 43 & 4D & 33 & 85 & 45 & F9 & 02 & 7F & 50 & 3C & 9F & A8 \\
+51 & A3 & 40 & 8F & 92 & 9D & 38 & F5 & BC & B6 & DA & 21 & 10 & FF & F3 & D2 \\
+CD & 0C & 13 & EC & 5F & 97 & 44 & 17 & C4 & A7 & 7E & 3D & 64 & 5D & 19 & 73 \\
+60 & 81 & 4F & DC & 22 & 2A & 90 & 88 & 46 & EE & B8 & 14 & DE & 5E & 0B & DB \\
+E0 & 32 & 3A & 0A & 49 & 06 & 24 & 5C & C2 & D3 & AC & 62 & 91 & 95 & E4 & 79 \\
+E7 & C8 & 37 & 6D & 8D & D5 & 4E & A9 & 6C & 56 & F4 & EA & 65 & 7A & AE & 08 \\
+BA & 78 & 25 & 2E & 1C & A6 & B4 & C6 & E8 & DD & 74 & 1F & 4B & BD & 8B & 8A \\
+70 & 3E & B5 & 66 & 48 & 03 & F6 & 0E & 61 & 35 & 57 & B9 & 86 & C1 & 1D & 9E \\
+E1 & F8 & 98 & 11 & 69 & D9 & 8E & 94 & 9B & 1E & 87 & E9 & CE & 55 & 28 & DF \\
+8C & A1 & 89 & 0D & BF & E6 & 42 & 68 & 41 & 99 & 2D & 0F & B0 & 54 & BB & 16 \\
+\end{bmatrix}
+$$
+
+S盒其实是一个代数变换，可以写成两个阶段的$GF(2^8)$上的运算组合：
+\begin{enumerate}
+    \item 计算输入字节的乘法逆元（0映射到0）。
+    \item 对逆元进行仿射变换（从低位到高位排），$y = A \cdot x \oplus b$。
+$$
+A =
+\begin{bmatrix}
+1 & 0 & 0 & 0 & 1 & 1 & 1 & 1 \\
+1 & 1 & 0 & 0 & 0 & 1 & 1 & 1 \\
+1 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+1 & 1 & 1 & 1 & 0 & 0 & 0 & 1 \\
+1 & 1 & 1 & 1 & 1 & 0 & 0 & 0 \\
+0 & 1 & 1 & 1 & 1 & 1 & 0 & 0 \\
+0 & 0 & 1 & 1 & 1 & 1 & 1 & 0 \\
+0 & 0 & 0 & 1 & 1 & 1 & 1 & 1 \\
+\end{bmatrix},
+\quad
+b =
+\begin{bmatrix}
+1 \\ 1 \\ 0 \\ 0 \\ 0 \\ 1 \\ 1 \\ 0
+\end{bmatrix}
+$$
+\end{enumerate}
+
+\subsubsection{密钥扩展}
+AES的密钥扩展（Key Expansion）将原始密钥扩展为多个轮密钥。
+对于128位密钥，生成10个轮密钥；192位密钥，生成12个轮密钥；256位密钥，生成14个轮密钥。
+主要步骤包括：先将原始密钥分为$N_k$个W（Word,32 bits），之后迭代生成新的W，直到数量满足需要。
+当$N_k=4,6$，
+$$
+W_i =
+\begin{cases}
+W_{i - Nk} \oplus \text{SubByte}(\text{RotByte}(W_{i-1})) \oplus \text{Rcon}_{i/Nk}, & i \bmod Nk = 0 \\
+W_{i - Nk} \oplus W_{i-1}, & i \bmod Nk \neq 0
+\end{cases}
+$$
+其中，RotByte是将Word循环左移1字节，SubByte是S盒替换，Rcon是轮常量（Round Constant），
+$Rcon_i = \begin{bmatrix}2^{i-1} & 00 & 00 & 00\end{bmatrix}$。
+当$N_k=8$，不一样的一点是当$i \equiv 4 \pmod{Nk},W_i=W_{i - Nk} \oplus \text{SubByte}(W_{i-1})$。

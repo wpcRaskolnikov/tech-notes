@@ -1,0 +1,80 @@
+\section{哈希函数}
+\subsection{哈希函数简介}
+密码学里的哈希函数用来保证数据完整性，它将任意长度的输入数据转换为固定长度的输出值，
+这个输出被称为输入消息的消息摘要（Message Digest,MD）。Hash函数有带密钥的和不带密钥的，
+带密钥的哈希函数通常用作消息认证码（Message Authentication Code，MAC）。
+
+在密码学中，一般要求Hash函数满足以下三个性质：
+\begin{itemize}
+    \item 单向性，也称抗原像性（Pre-image Resistance）：给定一个哈希值，反推原始输入在计算上是困难的。
+    \item 弱抗碰撞（Weakly Collision Resistance）：已知$x$，寻找$x' \neq x$，使得$h(x')=h(x)$在计算上是困难的。
+    \item 强抗碰撞（Strongly Collision Resistance）：寻找$x$和$x'$（$x' \neq x$），使得$h(x')=h(x)$在计算上是困难的。
+\end{itemize}
+
+\subsection{MD5}
+MD5是1991年由密码学家 Ronald Rivest 设计的Hash算法，其分组长度是512位，输出128位的消息摘要。
+\begin{enumerate}
+    \item 消息填充，填充1后跟若干0，直至原消息可以分为若干512位的块和最后一个448位的块。
+    \item 取原消息的长度（以bit为单位）的最低64位添加到填充的消息之后。
+    \item 每个512位的块分成16个单字M，使用 4 个 32 位寄存器（A, B, C, D）做运算，初始值：
+$$
+A = 67452301 \quad B = efcdab89 \quad C = 98badcfe \quad D = 10325476
+$$
+    \item 做4轮运算，每轮16次操作。
+$$
+A = B + ((A + f(B, C, D) + M_{k} + T_i)<<< s) \quad (A, B, C, D) \leftarrow (D, A, B, C)
+$$
+注意每次操作后有个循环右移寄存器值的操作，$f$在这4轮中分别代表以下运算：
+$$
+\begin{aligned}
+F(B, C, D) &= (B \land C) \lor (\lnot B \land D) \quad &G(B, C, D) &= (B \land D) \lor (C \land \lnot D) \\
+H(B, C, D) &= B \oplus C \oplus D \quad &I(B, C, D) &= C \oplus (B \lor \lnot D)
+\end{aligned}
+$$
+$T_i$定义（$i$从0到63）：$T_i = \left\lfloor 2^{32} \cdot \left| \sin(i + 1) \right| \right\rfloor$，
+$s$和$k$每轮值不一样，s在各轮中循环使用：
+\begin{align*}
+s &= \{7,12,17,22\},\ \{5,9,14,20\},\ \{4,11,16,23\},\ \{6,10,15,21\} \\
+k &= \{i\},\ \{(5i + 1) \bmod 16\},\ \{(3i + 5) \bmod 16\},\ \{(7i) \bmod 16\}
+\end{align*}
+    \item 每个块运算过后，都将此次得到的寄存器值与原值相加存入寄存器，最后拼接寄存器的值作为MD5的输出。
+\end{enumerate}
+
+\subsection{SHA-1}
+SHA（Secure Hash Algorithm）是美国国家安全局（National Security Agency,NSA）于1993年在MD4基础上改进设计的，
+并由NIST公布作为安全哈希标准（Secure Hash Standard）。1995年，NSA提出SHA的改进算法SHA-1，
+SHA和SHA-1输出长度都为160位，2002年，SHA的变形算法SHA-256、SHA-384和SHA-512公布。
+
+SHA-1是从MD4改进而来，算法与MD5算法有许多相似之处：
+\begin{enumerate}
+    \item SHA-1的消息填充与分块与MD5一致。
+    \item 通过扩展，将16个M块扩展成80个，$M_{i} = ( M_{i-3} \oplus M_{i-8} \oplus M_{i-14} \oplus W_{i-16}) <<< 1$。
+    \item 使用 5 个 32 位寄存器（A, B, C, D，E）做运算，初始值：
+$$
+A = 67452301 \quad B = efcdab89 \quad C = 98badcfe \quad D = 10325476 \quad E = c3d2e1f0
+$$
+    \item 做4轮运算，每轮20次操作。
+\begin{align*}
+TEMP &= (A <<< 5) + f(B, C, D) + E + M_i + K \\
+E = D \quad D &= C \quad C = (B <<< 30) \quad B = A \quad A = TEMP
+\end{align*}
+$K$循环四个值：$\{5a827999,6ed9eba1,8f1bbcdc,ca62c1d6\}$，$f$在这4轮中分别代表以下运算：
+$$
+\begin{aligned}
+\begin{aligned}
+f_1(B, C, D) &= (B \land C) \lor (\lnot B \land D) \quad &f_2(B, C, D) &= B \oplus C \oplus D \\
+f_3(B, C, D) &= (B \land C) \lor (B \land D) \lor (C \land D) \quad &f_4(B, C, D) &= B \oplus C \oplus D 
+\end{aligned}
+\end{aligned}
+$$
+    \item 和MD5一样，也将每次得到的值与原值相加存入寄存器，最后拼接寄存器的值作为输出。
+\end{enumerate}
+
+\subsection{MD6}
+MD5被发现存在安全漏洞后，在Crypto2008上，Rivest提出了MD6算法，该算法每轮输出1024位，
+支持四种摘要长度，即MD6-224、MD6-256、MD6-384和MD6-512。
+
+
+\subsection{SHA-2、SHA-3及SM3简介}
+SHA-2指在SHA-1基础上形成的SHA-224、SHA-256、SHA-384、SHA-512等一系列算法，SHA-3是2009年NIST公开征集安全性更高的算法。
+SM3是王小云等设计的，于2010年被中国国家密码管理局颁布为标准，SM3与SHA-256的算法有相似之处，它的安全性和效率与其相当。

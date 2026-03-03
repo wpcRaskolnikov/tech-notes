@@ -1,0 +1,24 @@
+\documentclass[UTF8]{ctexart}
+\usepackage[top=1.2in,bottom=1.2in,left=1.25in,right=1in]{geometry}
+
+\title{信息搜集}
+\author{WPC}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{信息搜索}
+\begin{itemize}
+	\item google hacking：常用指令有 site、inurl、intitle、allintitle、filetype、cache。
+	\item whois、host 查询域名注册信息，将域名和 IP 地址进行转换。
+	\item nslookup、dig 查询 DNS 记录。
+	\item https://searchdns.netcraft.com/
+	\item ping、fping -a -g 192.168.1.0/24 > activate.txt
+	\item nmap -sT -p- -PN 192.168.1.0/24（sT代表使用TCP扫描，还有UDP、SYN、Xmas、Null等模式）
+	\item hydra -l 用户名 -P 密码字典 -t 并发数 -vV 协议://目标IP[:端口]
+\end{itemize}
+
+
+\end{document}

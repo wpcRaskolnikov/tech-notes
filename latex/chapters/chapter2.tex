@@ -1,0 +1,97 @@
+\section{正文}
+在 \LaTeX 中，文档的章节划分可以使用多级命令：part、chapter、section、subsection、subsubsection、paragraph 和 subparagraph。
+此外，LaTeX 提供了 @\appendix@ 命令用于附录的设置，如果需要更灵活的附录排版，可以使用 \emph{appendix} 宏包。
+对于 book 文档类，还可以通过 @\frontmatter@、@\mainmatter@ 和 @\backmatter@ 将整本书分为三个部分。
+多文件编译时，可以使用 @\include{}@ 和 @\input{}@ 命令引入外部文件。
+
+正文中的标点分类：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 可以直接使用：\verb|, . ; ! ? ` ' ( ) [ ] - / * @|
+	\item 不能使用：\verb|~ # $ % ^ & { } _ \|
+	\item 用于数学公式：\verb@| < > + =@
+	\item 中文中的全角符号一般可以直接使用
+\end{itemize}
+
+如果需要在文档中输出特殊的 Unicode 符号，
+可以使用 @\symbol{}@ 命令。其参数可以是十进制数、@"@ 开头的十六进制数、@'@ 开头的八进制数，或者@`@加单独的字符。
+
+字体的性质有字体族（font family）、字体形状（font shape）、字体系列（font series），
+如果需要在复杂环境恢复普通字体，可以用@\textnormal{Text}@或者声明命令@\normalfont@。
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|lll|}
+		\hline
+		字体族 & 带参数命令           & 声明命令        \\
+		\hline
+		罗马  & @\textrm{Text}@ & @\rmfamily@ \\
+		无衬线 & @\textsf{Text}@ & @\sffamily@ \\
+		打字机 & @\texttt{Text}@ & @\ttfamily@ \\
+		\hline
+	\end{tabular}%
+	\qquad
+	\begin{tabular}{|lll|}
+		\hline
+		字体形状 & 带参数命令           & 声明命令       \\
+		\hline
+		直立   & @textup{Text}@  & @\upshape@ \\
+		意大利  & @\textit{Text}@ & @\itshape@ \\
+		倾斜   & @\textsl{Text}@ & @\slshape@ \\
+		小型大写 & @\textsc{Text}@ & @\scshape@ \\
+		\hline
+	\end{tabular}
+\end{table}
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|lll|}
+		\hline
+		字体系列 & 带参数命令           & 声明命令        \\
+		\hline
+		中等   & @\textmd{Text}@ & @\mdseries@ \\
+		加宽加粗 & @\textbf{Text}@ & @\bfseries@ \\
+		\hline
+	\end{tabular}
+\end{table}
+
+强调字体可以使用@\emph{Text}@，或声明形式@\em@，默认把直立改为斜体，如果需要其他强调形式，可以导入 \emph{ulem} 宏包。
+调整字号可以使用@\zihao{}@设置命令，也可以使用如下的声明命令：
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|lllll|}
+		\hline
+		@\tiny@  & @\scripysize@ & @\footnotesize@ & @\small@ & @\normalsize@ \\
+		@\large@ & @\Large@      & @\LARGE@        & @\huge@  & @\Huge@       \\
+		\hline
+	\end{tabular}
+\end{table}
+
+在正文中换行通常使用 @\\[2cm]@，其中方括号中的可选参数表示换行后额外增加的垂直间距。如果需要另起一段，则应在文本中留一个空行以分段。
+article等标准文档中基本行距为字号大小的1.2倍，ctexart等中文文档中则是1.56倍，可以使用@\linespread{}@设置行距为基本行距的多少倍，如果需要更多效果，可以使用\emph{setspace}宏包。
+水平间距可以用@\hspace{}@指定，常用距离单位有in、cm和em，em是字号对应的长度，也可以用以下命令指定空格：
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|lllll|}
+		\hline
+		不可换行 & @\negthinspace@ & @\thinspace@ & @enspace@ & @\nobreakspace@或@~@ \\
+		可换行  & @\enskip@       & @\quad@      & @\qquad@  & @\ @                \\
+		\hline
+	\end{tabular}
+\end{table}
+如果需要可伸缩的长度，可以使用@\fill@，@\hfill@是@\hspace{\fill}@的缩写，
+利用这个命令可以在一行内均匀分布内容，@\dotfill@和@\hrulefill@也类似。
+
+\LaTeX 中可以用盒子排版内容，如果需要重叠内容，可以使用@\llap{Text}@或@\rlap{Text}@：
+\begin{code}[title=盒子示例]
+	\begin{verbatim}
+    \mbox{Text}
+    \makebox[Width][l]{Text} % 左对齐的文本盒子
+    \fbox{Text} % 带边框的盒子
+    \framebox[Width][s]{Text} % 分散对齐的文本盒子
+
+    \parbox[c][Height][c]{Width}{Text} % 内容居中的段落盒子，会自动换行
+    \begin{minipage}[t][Height][c]{Width} Text \end{minipage} % 基线在底部
+    \begin{varwidth}{Width} Text \end{varwidth} % 宏包varwidth，宽度可变
+
+    \rule[raiseHeight]{width}{height} % 实心盒子
+    \raisebox{raiseHeight}{Text} % 可升降盒子
+\end{verbatim}
+\end{code}

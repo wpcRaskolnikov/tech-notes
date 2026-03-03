@@ -1,0 +1,98 @@
+\section{web开发}
+\subsection{环境配置}
+\begin{code}[title=node]
+	\begin{verbatim}
+	sudo apt update && sudo apt -y upgrade
+	sudo apt install -y npm nodejs
+	sudo npm install -g n
+	sudo n stable
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=yarn]
+	\begin{verbatim}
+	sudo corepack enable
+	corepack use yarn@latest
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=vite]
+	\begin{verbatim}
+	# Don't use Rolldown
+	yarn create vite frontend --template react-swc-ts
+	rm -rf package.json yarn.lock .pnp.cjs .yarn
+	cd frontend
+	# Delete src/assets, App.css, index.css
+	corepack use yarn@latest
+	yarn
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=react]
+	\begin{verbatim}
+	yarn add @mui/icons-material @mui/material @emotion/styled @emotion/react
+	yarn add react-router jotai react-hook-form
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=IDE]
+	\begin{verbatim}
+	# zed
+	yarn dlx @yarnpkg/sdks base
+	ctrl+shift+p: settings
+{
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "typescript": { "tsdk": ".yarn/sdks/typescript/lib" },
+      },
+    },
+  },
+}
+    # vscode
+    yarn dlx @yarnpkg/sdks vscode
+    ctrl+shift+p
+    Select TypeScript Version
+
+\end{verbatim}
+\end{code}
+
+\subsection{开发部署}
+\begin{code}[title=/etc/nginx/sites-enabled/default]
+	\begin{verbatim}
+	sudo apt install -y nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/dist;
+
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name your-domain.com;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 将 /api/auth/ 的请求转发到 keycloak.com/auth/
+    location /api/auth/ {
+            rewrite ^/api/auth/(.*)$ /auth/$1 break;
+
+            proxy_pass https://keycloak.com;
+
+            proxy_set_header Host keycloak.com;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+    # 将 /api/v2/ 的请求转发到 data.com/
+     location /api/v2/ {
+            proxy_pass https://data.com;
+
+            proxy_set_header Host data.com;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+}
+\end{verbatim}
+\end{code}

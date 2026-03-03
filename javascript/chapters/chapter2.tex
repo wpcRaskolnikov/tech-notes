@@ -1,0 +1,123 @@
+\section{语法结构}
+\subsection{保留字}
+\begin{tabular}{lllllll}
+	as        & async    & await    & break   & case    & catch      & class      \\
+	const     & continue & debugger & default & delete  & do         & else       \\
+	enum      & export   & extends  & false   & finally & for        & from       \\
+	function  & get      & if       & import  & in      & implements & instanceof \\
+	interface & let      & new      & null    & of      & package    & private    \\
+	protected & public   & return   & set     & static  & super      & switch     \\
+	target    & this     & throw    & try     & typeof  & var        & void       \\
+	while     & with     & yield                                                  \\
+\end{tabular}
+
+\subsection{类型}
+在 JavaScript 中，类型分为原始类型和对象类型，对象类型是可修改的（mutable），而原始类型是不可修改的（immutable）。
+原始类型包括：数值（Number）、字符串（String）、布尔值（Boolean）、null、undefined 和 Symbol。
+对象类型则更为丰富，例如：数组（Array）、集合（Set）、映射（Map）、正则表达式（RegExp）、日期（Date）、错误对象（Error）等。
+
+\subsubsection{数值}
+在 JavaScript 中，十六进制字面量以 0x 或 0X 开头；整数还可以使用 二进制 或 八进制 表示，分别以前缀 0b 和 0o（或 0B、0O）开头。
+浮点字面量支持科学计数法，数值后可以跟字母 e 或 E，表示该数值乘以 10 的相应指数次幂。
+BigInt 字面量写作一串数字后跟小写字母 n，也可以通过前缀 0b、0o 或 0x 来表示二进制、八进制或十六进制的 BigInt。
+虽然标准运算符可用于 BigInt，但不能将 BigInt 与常规数值混合运算。
+此外，数值字面量中可以使用下划线对数字进行分隔，以提高可读性。
+
+JavaScript通过内置Math对象提供了一组算术函数和变量，详细可以参考
+\href{https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects}{MDN Web Docs}。
+在 JavaScript 中，算术运算即使发生溢出或除以零，也不会抛出错误。
+当运算结果超出可表示的数值范围（上溢出）时，结果会为 Infinity 或 -Infinity。
+下溢出发生在运算结果比可表示的最小数值更接近零的情况下，此时返回 0 或 -0，而 -0 与 0 在大多数情况下几乎无法区分。
+
+0 除以 0 是无意义的运算，其结果为 NaN（Not a Number）。此外，无穷大除以无穷大、负数开平方，
+或者对无法转换为数值的非数值操作数进行算术运算，结果也都是 NaN。
+NaN 不等于任何值，也不等于它自身。要判断一个变量是否为 NaN，可以使用表达式 x != x，或者调用 Number.isNaN(x)。
+
+\subsubsection{字符串}
+JavaScript 使用 UTF-16 编码，字符串由无符号 16 位值的序列组成。
+在 UTF-16 中，码点超过 16 位的字符会被编码为 两个 16 位值的序列。
+然而，JavaScript 的大多数字符串操作方法通常是以 16 位值 为单位进行处理，而不是以完整字符为单位。
+不过如果使用 for...of 循环或展开操作符（...）迭代字符串，则迭代的单位是完整字符（code point）。
+
+在JavaScript中，Unicode 转义字符以 \verb|\u| 开头，后跟 4 位十六进制数字。
+为了支持码点大于 16 位的字符，可以使用花括号语法：\verb|\u{XXXXXX}|。
+字符串字面量是单引号、双引号或反引号包裹的字符串，普通字符串字面量可以在每行末尾加一个反斜杠来实现多行书写，
+而使用反引号定义的 模板字面量 支持跨行字符串，会保留换行符，并且可以通过\verb|${}| 插入任意表达式。
+
+\subsubsection{符号}
+Symbol 类型没有字面量，必须通过 Symbol() 或 Symbol.for() 函数来创建。
+Symbol() 接受一个可选的字符串参数作为描述，每次调用都会返回一个唯一的 Symbol 值，永远不会重复。
+Symbol.for() 会在全局符号注册表中查找指定的字符串键，如果存在则返回对应的 Symbol，否则会创建一个新的 Symbol 并注册到全局表中。
+
+\subsubsection{解构赋值}
+解构赋值允许从数组或对象中提取值，并将其赋值给变量。
+对于数组，可以使用方括号语法来解构，对于对象，则可以使用花括号语法来解构，例如：
+\begin{verbatim}
+    let [a, b] = [1, 2]; // a = 1, b = 2
+    [x, y] = [y, x]; // 交换 x 和 y 的值
+    let {name, age} = {name: "Alice", age: 30}; // name = "Alice", age = 30
+\end{verbatim}
+解构赋值时，左侧多余变量会被设为undefined，右侧多余变量则会被忽略，如果想收集所有剩余元素，可以使用剩余参数语法。
+\begin{verbatim}
+    let [a, b, ...rest] = [1, 2, 3, 4]; // a = 1, b = 2, rest = [3, 4]
+    let {x, y, ...others} = {x: 1, y: 2, z: 3}; // x = 1, y = 2, others = {z: 3}
+\end{verbatim}
+解构赋值还支持嵌套结构和默认值，例如：
+\begin{verbatim}
+    let [a, [b, c]] = [1, [2, 3]]; // a = 1, b = 2, c = 3
+    let {x, y = 10} = {x: 5}; // x = 5, y = 10
+\end{verbatim}
+
+\subsection{操作符}
+\subsubsection{条件式}
+在 JavaScript 中，null 和 undefined 是唯一两个没有属性的值，
+当对它们使用普通的属性访问表达式时，就会抛出 TypeError。
+为避免这种错误，可以使用可选链操作符（?. 或 ?.[]）。
+当左侧表达式的结果为 null 或 undefined 时，整个访问表达式会直接返回 undefined。
+类似地，在调用函数时，可以使用 ?.() 替代普通的 () 调用。
+如果函数本身为 null 或 undefined，那么表达式也会返回 undefined。
+
+\subsubsection{关系操作符}
+JavaScript有两个操作符用于测试两个值是否相等。一个是==操作符，这个操作符先做类型转换，再判断相等；
+另一个是严格相等操作符===，如果两个值不是同一种类型，那么这个操作符就不会判定它们相等。
+
+\textbf{in}操作符左侧操作数是可以转换为字符串的值，右侧操作数是对象。如果左侧的值是右侧的对象的属性名，则in返回true。
+\textbf{instanceof}操作符左侧操作数是对象，右侧操作数是对象类的标识。这个操作符在左侧对象是右侧类的实例时求值为true。
+
+\subsubsection{其他操作符}
+\textbf{typeof}操作符的返回值是一个字符串，表明操作数的类型。
+\textbf{delete}操作符用于删除对象的属性或数组的元素，它只能作用于属性访问表达式。
+\textbf{await}操作符期待一个Promise对象作为其唯一操作数，返回值值是Promise对象的兑现值，await只能出现在已经通过async关键字声明为异步的函数中。
+
+先定义（first-defined）操作符??求值其先定义的操作数：如果其左操作数不是null或undefined，就返回该值。
+否则，它会返回右操作数的值。??是短路的，有些时候??是对||的一个有用的替代，选择先定义的操作数。
+例如：
+\begin{verbatim}
+    let max = maxWidth || preferences.maxWidth || 500; // 这种用法忽略了0值
+    let max = maxWidth ?? preferences.maxWidth ?? 500; // max可以为0
+\end{verbatim}
+
+\subsection{语句}
+\subsubsection{for语句}
+for/of循环专门用于遍历可迭代对象。字符串可以逐个字符迭代的，
+对于字符串，它会逐个迭代其中的字符；
+对于 Set，循环体会对集合中的每一个元素执行一次；
+对于 Map，迭代器会依次返回键/值对（一个数组），其中第一个元素是键，第二个元素是对应的值。
+
+for/in循环可以用于任意对象，用于迭代对象的属性。
+for/in循环并不会枚举对象的所有属性，比如它不会枚举符号属性，对于字符串的属性，它只会遍历可枚举的属性。
+JavaScript核心定义的各种内部方法是不可枚举的，不过默认情况下，手写代码定义的所有属性和方法都是可枚举的。
+如果for/in循环的循环体删除一个尚未被枚举的属性，则该属性就不会再被枚举了。
+
+\subsubsection{debugger语句}
+debugger 语句本身通常什么也不做。
+在实际运行中，它的作用类似于在代码中设置了一个断点：当 JavaScript 执行到该语句时，程序会暂停运行，
+我们就可以通过调试器来打印变量的值、检查调用栈等。
+需要注意的是，debugger 并不会主动打开调试器，它只是在调试器已启用的情况下才会生效。
+比如在浏览器中，如果已经打开了开发者工具控制台，执行到 debugger 时程序就会暂停。
+
+\subsubsection{函数声明}
+function声明用于定义函数，函数声明会创建一个函数对象，并把这个函数对象赋值给指定的名字，
+然后在程序的任何地方都可以通过这个名字来引用这个函数。位于任何JavaScript代码块中的函数声明都会在代码运行之前被处理，
+无论在作用域中的什么地方声明函数，这些函数都会被“提升”，就好像它们是在该作用域顶部定义的一样。
+于是在程序中，调用函数的代码可能位于声明函数的代码之前。

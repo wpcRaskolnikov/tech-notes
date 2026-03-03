@@ -1,0 +1,101 @@
+\section{定时与服务}
+\subsection{cron}
+通过运行 \verb|crontab -e| 命令来编辑定时任务，文件中每一行表示一个定时任务，格式如下：
+
+\begin{code}[title=cron 任务格式]
+	\begin{verbatim}
+* * * * * /usr/bin/python3 example.py >> output.log 2>&1
+| | | | |
+| | | | +---- 星期 (0 - 7) (0 和 7 都是星期天)
+| | | +------ 月 (1 - 12)
+| | +-------- 日 (1 - 31)
+| +---------- 小时 (0 - 23)
++------------ 分钟 (0 - 59)
+    \end{verbatim}
+\end{code}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|c|}
+		\hline
+		\textbf{时间表达式}        & \textbf{含义}  \\
+		\hline
+		\texttt{0 * * * *}    & 每小时的第0分钟执行   \\
+		\texttt{0 9 * * *}    & 每天上午9点执行     \\
+		\texttt{0 9 * * 1-5}  & 每周一到周五上午9点执行 \\
+		\texttt{*/10 * * * *} & 每10分钟执行一次    \\
+		\hline
+	\end{tabular}
+	\caption{常见的 Cron 时间表达式说明}
+\end{table}
+
+注意：编辑保存后无需重启 cron 服务，它会立即生效。如果系统宕机，错过的任务不会被补执行。
+
+\subsection{systemd}
+systemd 是现代 Linux 发行版中常用的初始化系统和服务管理器，用于启动和管理系统服务及进程。
+systemd 使用单个二进制文件 \verb|/usr/bin/systemd| 作为初始化进程（PID 1），并通过一系列配置文件来定义和管理服务。
+这些配置文件通常位于 \verb|/etc/systemd/system/| 目录下，文件扩展名为 \verb|.service|。
+
+\begin{code}[title=/etc/systemd/system/rathole.service]
+	\begin{verbatim}
+[Unit]
+Description=Rathole Server Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+
+ExecStart=/usr/bin/rathole -s /etc/rathole/rathole.toml
+
+[Install]
+WantedBy=multi-user.target
+    \end{verbatim}
+\end{code}
+
+\begin{code}[title=cron 任务格式]
+	\begin{verbatim}
+sudo systemctl daemon-reload
+sudo systemctl start rathole
+sudo systemctl enable rathole
+sudo systemctl status rathole
+    \end{verbatim}
+\end{code}
+
+\subsection{GRUB}
+GRUB（GRand Unified Bootloader）是一个引导加载器程序，负责在计算机启动时加载和引导操作系统内核。
+GRUB 默认配置文件是 \texttt{/etc/default/grub}， \texttt{/etc/default/grub.d} 目录里面也存放着一些配置。
+使用 \verb|update-grub| 命令时，会用上述配置生成最终配置文件 \texttt{/boot/grub/grub.cfg}。
+
+\verb|uname -r| 查看当前使用内核，要列出当前系统中已安装的 Linux 内核版本，可以使用命令\verb@dpkg --list | grep linux-image@。
+
+命令输出解释：
+\begin{itemize}
+    \item \texttt{ii}：表示已安装，并成功配置。
+    \item \texttt{rc}：表示已删除，但配置文件仍然存在。
+\end{itemize}
+
+如果你想删除旧内核版本，可以使用命令 \verb|sudo apt purge linux-image-x.x.x-x-generic|。
+删除内核后，需要运行 \verb|sudo update-grub| 命令来更新 GRUB 配置。
+如果你需要清理残留依赖包，运行 \verb|sudo apt autoremove|。
+
+进入grub：
+\begin{itemize}
+	\item \texttt{命令行}：开机长按 esc 进入命令行。
+	\item \texttt{图形界面}：开机长按 Shift，如果不行，先进入命令行，运行 \verb|normal| 命令，之后按一下 esc。
+\end{itemize}
+
+\subsection{swap}
+
+\begin{code}[title=systemd 服务配置文件示例]
+	\begin{verbatim}
+free -h
+swapon --show
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    \end{verbatim}
+\end{code}

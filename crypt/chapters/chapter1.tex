@@ -1,0 +1,58 @@
+\section{古典密码学}
+\subsection{代换密码}
+代换密码（Substitution Cipher）是用不同的字母替代明文中的字母，从而达到加密目的。
+
+\subsubsection{Caesar密码}
+Caesar密码是一种单表代换密码（Monoalphabetic Cipher），它大约出现于公元前 100 年的高卢战争期间，
+当时的古罗马统治者尤利乌斯·凯撒（Julius Caesar） 使用其在军事通信中保护机密信息。
+在这种密码中，每个字母都被替换为其后第k个字母。例如，k = 3 时，A替换为D，B替换为E，以此类推。
+N就是密钥，加密过程用公式表示：$$c = (m + k) \bmod 26$$
+
+\subsubsection{Vigenère密码}
+Vigenère密码是由法国外交官布莱兹·德·维热内尔（Blaise de Vigenère）在 1986 年提出的一种多表代换密码（Polyalphabetic Cipher）。
+它可以看作是Caesar密码的推广，密钥和明文的长度一样长，不足则重复密钥，密钥中每个字符都对应一个Caesar密码的代换。
+加密过程用公式表示：$$c_i = (m_i + k_i) \bmod 26$$
+其中，$m_i$是明文的第i个字符，$k_i$是密钥的第i个字符，$c_i$是密文的第i个字符。
+
+\subsubsection{Playfair密码}
+Playfair密码是由查尔斯·惠斯通（Charles Wheatstone）于 1854 年发明的一种分组代换密码（Polygraphic Substitution Cipher），
+因其好友莱昂·普莱费尔（Lord Playfair）的推广而以他命名。
+加密前先对明文分组，分组过程：
+\begin{enumerate}
+    \item 将明文分为两两一组。
+    \item 如果分组中两字符相同，则插入X与第一个字符成组。
+    \item 如果字符数为奇数，则在最后一个字符后面补上X。
+\end{enumerate}
+例如“balloon”被分组为“BA LX LO ON”。之后是产生加密矩阵：
+\begin{enumerate}
+    \item 选择一个密钥字符串，删除其中重复字符。
+    \item 按顺序填入一个$5 \times 5$的矩阵。
+    \item 矩阵之后的内容，由字母表按顺序填充。
+\end{enumerate}
+注意：在矩阵中，I和J合并为一个字母，即用I替代J，例如密钥为“just“时的矩阵为：
+$$
+\begin{array}{ccccc}
+I & U & S & T & A \\
+B & C & D & E & F \\
+G & H & K & L & M \\
+N & O & P & Q & R \\
+V & W & X & Y & Z \\
+\end{array}
+$$
+最后是加密过程：
+\begin{enumerate}
+    \item 如果两字符在同一行，则将每个字符替换为其右边的字符（循环处理）。
+    \item 如果两字符在同一列，则将每个字符替换为其下方的字符（循环处理）。
+    \item 如果两字符在不同的行和列，则将它们替换为同一行中与它同组的字符所在列的字符。
+\end{enumerate}
+
+\subsubsection{Hill密码}
+Hill 密码是由 Lester S. Hill 在 1929 年提出的一种多字母分组代换密码。
+其密钥为一个 $n \times n$ 的矩阵，且必须是可逆矩阵，明文被分为 $n$ 个字符一组，一组为一个向量。
+加密过程用公式表示：
+$$C = K \cdot M \bmod 26$$
+
+\subsection{置换密码}
+置换密码（Permutation Cipher）保持加明文加中的而所有字母，只是改变他们在明文中的位置，
+也被称作换位密码（Transposition Cipher）。置换密码的密钥为一个n元置换，加密时，先把明文分为n个字符一组，
+然后对每组字符进行置换。单轮置换容易被攻破，因此通常会进行多轮置换。

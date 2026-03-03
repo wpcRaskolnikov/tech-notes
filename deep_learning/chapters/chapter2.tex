@@ -1,0 +1,70 @@
+\section{神经网络}
+\subsection{神经网络简介}
+在前面的感知机模型中，参数的确定并不是由计算机自动完成的，而是由我们人为地根据真值表等“训练数据”手动计算得出。
+为了让计算机能够自动学习和调整参数，神经网络的概念应运而生。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{2-1.png}
+	\caption{神经网络示例}
+\end{figure}
+
+将之前感知机的函数改写成以下更简洁的形式。
+\begin{equation*}
+	y     = h(b + w_1 x_1 + w_2 x_2) \quad
+	h(x)  =
+	\begin{cases}
+		0, & x \leq 0 \\
+		1, & x > 0
+	\end{cases}
+\end{equation*}
+
+$ h(x) $ 函数会将输入信号的总和转换为输出信号，被称为激活函数（activation function）。
+我们之前使用的激活函数是“阶跃函数”，一旦输入超过阈值，就切换输出。
+除了这个外，神经网络中常用的激活函数有 sigmoid 函数、ReLU（Rectified Linear Unit）函数。
+
+\begin{equation*}
+	\sigma(x)       = \frac{1}{1 + e^{-x}} \quad
+	\text{ReLU}(x)  =
+	\begin{cases}
+		0, & x \leq 0 \\
+		x, & x > 0
+	\end{cases}
+\end{equation*}
+
+对于输出层，我们有时不是直接把输出层的值当作最终结果，比如如果需要做个多分类问题，
+可能需要用 softmax 函数对输出层处理。
+\begin{equation*}
+	\text{Softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}
+\end{equation*}
+
+\subsection{损失函数}
+神经网络“从数据中学习”，由数据自动决定权重参数的值。
+为了达成这个目的，我们先要决定损失函数（loss function），
+之后，神经网络就以这个指标为基准，寻找最优权重参数。
+常用的损失函数有均方误差（mean squared error）和交叉熵误差（cross entropy error）。
+
+\begin{equation*}
+	\text{MSE}  = \frac{1}{2} \sum_{i=1}^n (y_i - \hat{y}_i)^2 \quad
+	\text{CE}   = - \sum_{i=1}^K \hat{y}_i \log(y_i)
+\end{equation*}
+
+这里，$y_i$ 是表示神经网络的输出，$\hat{y}_i$ 表示监督数据，$i$ 表示数据的维数。
+交叉熵误差主要用于多分类问题，实际上他只计算对应正确解标签的输出，假设正确解标签的索引是“1”，
+与之对应的神经网络的输出是0.7，则交叉熵误差是−log 0.7。
+
+使用数据进行学习，就是针对训练数据计算损失函数的值，找出使该值尽可能小的参数。
+如果遇到大数据，数据量会有几百万、几千万之多，这种情况下以全部数据为对象计算损失函数是不现实的。
+因此，我们从全部数据中选出一部分，作为全部数据的“近似”。从训练数据中选出一批数据（mini-batch），
+然后对每个mini-batch进行学习，这种学习方式称为mini-batch学习。
+
+学习的目标是最小化损失函数，梯度法是实现这一目标的常用优化方法：
+\begin{align*}
+	x_1^{(t+1)} & = x_1^{(t)} - \eta \frac{\partial f}{\partial x_1}(x_1^{(t)}, x_2^{(t)}) \\
+	x_2^{(t+1)} & = x_2^{(t)} - \eta \frac{\partial f}{\partial x_2}(x_1^{(t)}, x_2^{(t)})
+\end{align*}
+$\eta$ 被称为学习率（learning rate）。可以通过数值微分（Numerical Differentiation）来计算导数，
+即向h中赋入一个微小值，直接计算导数式。
+\begin{equation*}
+	\frac{d}{dx} f(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}
+\end{equation*}

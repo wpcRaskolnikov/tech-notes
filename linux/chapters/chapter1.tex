@@ -1,0 +1,139 @@
+\section{目录与文件}
+\subsection{目录}
+常见的Linux目录名均基于文件系统层级标准（filesystem hierarchy standar，FHS）。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|p{11cm}|}
+		\hline
+		\textbf{目录}    & \textbf{说明}                                             \\
+		\hline
+		/bin           & 系统引导与执行所必需的用户可执行程序（如 \texttt{ls}, \texttt{cp}）。         \\
+		\hline
+		/boot          & 启动相关文件：内核、initramfs、引导程序配置等。                            \\
+		\hline
+		/dev           & 设备文件和特殊文件（由内核和 udev 管理）。                                \\
+		\hline
+		/etc           & 系统范围的配置文件。                                              \\
+		\hline
+		/home          & 普通用户的家目录。                                               \\
+		\hline
+		/lib           & 系统核心程序运行所需的共享库。                                         \\
+		\hline
+		/lost+found    & 用于文件系统在崩溃或错误后的部分恢复，除非系统发生严重问题，否则该目录为空。                  \\
+		\hline
+		/media         & 可移动介质的挂载点（如 U 盘、光驱）。                                    \\
+		\hline
+		/mnt           & 临时挂载点，管理员手动挂载时常用。                                       \\
+		\hline
+		/opt           & 第三方商业软件的安装位置。                                           \\
+		\hline
+		/proc          & 内核与进程信息的伪文件系统（内存中生成）。                                   \\
+		\hline
+		/root          & root 用户的家目录。                                            \\
+		\hline
+		/run           & 运行时数据（通常为 tmpfs，重启后清空）。                                 \\
+		\hline
+		/sbin          & 系统管理相关的必需命令（如 \texttt{mount}, \texttt{fsck}）。           \\
+		\hline
+		/sys           & 设备与内核对象的伪文件系统（sysfs）。                                   \\
+		\hline
+		/tmp           & 临时文件目录，重启后可能被清理。                                        \\
+		\hline
+		/usr           & 用户空间程序和数据的层级根。                                          \\
+		\hline
+		/usr/bin       & 大量用户可执行程序。                                              \\
+		\hline
+		/usr/local     & 本地安装的软件及数据前缀（通常通过源代码编译安装）。                              \\
+		\hline
+		/usr/sbin      & 系统管理相关的命令。                                              \\
+		\hline
+		/usr/share     & /usr/bin中的程序所用到的共享数据，包括默认配置文件、图标、声音文件等。                 \\
+		\hline
+		/usr/share/doc & 系统中安装的大部分软件包自带文档。                                       \\
+		\hline
+		/var           & 修改比较频繁的数据存放在这里，比如：缓存、数据库、spool、用户邮件 等。                  \\
+		\hline
+		/var/log       & 系统和应用程序的日志文件目录，比较有用的有/var/log/messages和/var/log/syslog。 \\
+		\hline
+	\end{tabular}
+	\caption{Linux 常见目录与说明}
+\end{table}
+
+\subsection{文件}
+\subsubsection{文件类型}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{类型} & \textbf{说明}                      \\
+		\hline
+		\texttt{-}  & 普通文件。                            \\
+		\hline
+		\texttt{d}  & 目录。                              \\
+		\hline
+		\texttt{l}  & 链接文件,对于链接文件，文件模式始终是虚设的rwxrwxrwx。 \\
+		\hline
+		\texttt{c}  & 字符设备文件，比如终端和/dev/null。           \\
+		\hline
+		\texttt{b}  & 块设备文件，比如硬盘和DVD设备。                \\
+		\hline
+	\end{tabular}
+	\caption{文件类型}
+\end{table}
+
+\subsubsection{文件模式}
+文件模式共九个字符，分别定义了文件拥有者、文件所属组和其他用户对于文件的读、写、执行权限。
+使用chmod可以修改文件权限，使用chown可以修改文件拥有者，使用chgrp可以修改文件所属组。
+
+权限可以用数字表示法（如\texttt{755}）来设置，数字表示法中，每个数字是三个权限位的和，分别对应拥有者、所属组和其他用户。
+常用的有：7（rwx）、6（rw-）、5（r-x）、4（r--）、0（---），可以用umask查看文件创建时默认权限要屏蔽的位掩码。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|p{6cm}|}
+		\hline
+		\textbf{模式} & \textbf{文件} & \textbf{目录}               \\
+		\hline
+		\texttt{r}  & 允许打开和读取文件内容 & 允许列出目录内容（需要执行属性）          \\
+		\hline
+		\texttt{w}  & 允许修改文件内容    & 允许在目录中创建、删除和重命名文件（需要执行属性） \\
+		\hline
+		\texttt{x}  & 允许执行文件      & 允许进入目录                    \\
+		\hline
+	\end{tabular}
+	\caption{文件权限}
+\end{table}
+
+除了基本权限外，还有特殊权限：setuid、setgid和粘滞位，分别显示在文件模式的用户执行位、组执行位和其他用户执行位上，
+用数字表示法时，setuid为4，setgid为2，粘滞位为1。
+
+如果为可执行文件设置了setuid位，那么该文件在执行时将以文件拥有者的权限运行。
+如果为可执行文件设置了setgid位，那么该文件在执行时将以文件所属组的权限运行。
+如果为目录设置了setgid位，那么在该目录下创建的文件将继承该目录的所属组，一般共享目录会设置setgid位。
+如果为目录设置了粘滞位，那么只有文件拥有者、目录拥有者或超级用户才能删除或重命名该目录下的文件。
+
+\subsubsection{文件编辑}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llllll}
+		cat  & sort & uniq  & cut & paste & join   \\
+		comm & diff & patch & tr  & sed   & aspell \\
+		nl   & fold & fmt   & rev  & groff & seq    \\
+	\end{tabular}
+	\caption{文件操作命令}
+\end{table}
+
+常用命令说明如下：
+\begin{itemize}
+	\item \textbf{cut}：按列提取文件中的指定字段。
+	\item \textbf{paste}：按列合并多个文件内容。
+	\item \textbf{join}：根据某一字段将两个文件进行连接。
+	\item \textbf{comm}：逐行比较两个已排序文件，输出差异和共同部分。
+	\item \textbf{diff}：逐行比较文件内容的不同之处。
+	\item \textbf{patch}：根据 \texttt{diff} 生成的补丁文件来更新原文件。
+	\item \textbf{tr}：搜索替换文本中的字符。
+	\item \textbf{rev}：反转输入的每一行字符。
+	\item \textbf{sed}：流编辑器，用于替换、插入、删除文本。
+	\item \textbf{aspell}：拼写检查工具。
+	\item \textbf{seq}：生成一段数字范围。
+\end{itemize}
+

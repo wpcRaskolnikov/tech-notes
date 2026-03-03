@@ -1,0 +1,8 @@
+{document}
+^^I\maketitle % 排版标题、作者和日期，如果需要复杂的格式，可以试试titling宏包
+^^I\tableofcontents % 排版目录，依靠.toc目录文件
+
+^^I% 正文内容
+
+^^I\bibliography{math,springer} % 打印文献列表
+^^I\end{document}

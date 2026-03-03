@@ -1,0 +1,29 @@
+\subsection{IDEA}
+\subsubsection{IDEA简介}
+IDEA（International Data Encryption Algorithm）是1991年由James Massey和Xuejia Lai提出的分组密码算法，
+原名为IPES（International Pseudo-Efficient Scheme）。IDEA使用128位密钥，分组长度为64位，采用8轮加密。
+
+\subsubsection{轮函数}
+IDEA轮函数不是Feistel结构，其中主要有三种运算：异或、模$2^{16}$加法和模$2^{16}+1$乘法。
+每轮将输入分为4个16位分组，与6个16位子密钥进行运算。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{3-5.pdf}
+	\caption{IDEA轮结构}
+\end{figure}
+
+\subsubsection{输出变换}
+8轮加密后，IDEA使用4个子密钥进行输出变换，注意$M_2$与$M_3$交换了位置。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-6.pdf}
+	\caption{输出变换}
+\end{figure}
+
+\subsubsection{子密钥产生}
+IDEA的子密钥由128位密钥生成，分为52个16位子密钥。子密钥生成过程如下：
+\begin{enumerate}
+    \item 将128位密钥分为8个16位分组。
+    \item 对每个分组进行循环左移25位，生成子密钥。
+    \item 生成的子密钥按顺序使用。
+\end{enumerate} 

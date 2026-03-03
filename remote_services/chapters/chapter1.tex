@@ -1,0 +1,30 @@
+\section{远程服务}
+\subsection{NFS}
+\begin{code}[title=nfs service]
+	\begin{verbatim}
+sudo apt install nfs-kernel-server
+vim /etc/exports
+# 所有网段，ro只读，同步内存和磁盘(async优先写内存)，root用户映射为root用户(root_squash映射为匿名用户)
+/nfsroot *(rw,sync,no_subtree_check,root_squash)
+sudo exportfs -a
+
+sudo apt update
+sudo apt install vsftpd
+sudo systemctl start vsftpd
+sudo systemctl enable vsftpd
+sudo vim /etc/vsftpd.conf
+anonymous_enable=YES
+local_enable=YES //允许本地用户登录
+write_enable=YES //允许用户写
+sudo systemctl restart vsftpd.service
+    \end{verbatim}
+\end{code}
+
+\subsection{SSH}
+\begin{code}[title=ssh service]
+	\begin{verbatim}
+install -dm700 ~/.ssh
+scp ~/.ssh/id_ed25519.pub username@remoteip:
+chmod 600 ~/.ssh/authorized_keys
+    \end{verbatim}
+\end{code}

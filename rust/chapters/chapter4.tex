@@ -1,0 +1,96 @@
+\section{集合与迭代器}
+\subsection{闭包}
+闭包与函数类型并不相同，函数类型如 @fn(&City) -> bool@，表示一个具体的函数指针类型；
+而每个闭包在编译时都有自己独立的匿名类型，不过它们都实现了相应的函数特型，例如 @Fn(&City) -> bool@。
+
+闭包根据捕获方式的不同，会实现不同的特型：
+消耗捕获变量的闭包实现 @FnOnce@；需要可变访问的闭包 实现 @FnMut@；仅通过共享引用访问的闭包实现 @Fn@。
+@Fn@是@FnMut@的子特型，@FnMut@是@FnOnce@的子特型。
+
+对于非 move 闭包，如果它不修改捕获的值，只通过共享引用访问，则闭包类型本身可以实现 @Clone@ 和 @Copy@。
+而对于 move 闭包，若其捕获的所有变量都实现了 @Clone@ 和 @Copy@，则闭包自身也会自动实现这两个特型。
+
+\subsection{集合}
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|l|p{20em}|}
+		\hline
+		\textbf{集合}                            & \textbf{描述}                             \\
+		\hline
+		\verb|Vec<T>|                          & 动态数组。                                   \\
+		\hline
+		\verb|VecDeque<T>|                     & 双端队列（可增长的环形缓存区）。                        \\
+		\hline
+		\verb|LinkedList<T>|                   & 双向链表，其他集合通常是更好的选择。                      \\
+		\hline
+		\verb|HashMap<K,V> where K: Eq + Hash| & 基于哈希表的键值映射。                             \\
+		\hline
+		\verb|BTreeMap<K,V> where K: Ord|      & 基于 B 树的有序映射，按键排序。                       \\
+		\hline
+		\verb|HashSet<T> where T: Eq + Hash|   & 无序集，支持\verb|&|、@|@、@-@、@^@、@==@和@!=@操作。 \\
+		\hline
+		\verb|BTreeSet<T> where T: Ord|        & 基于 B 树的有序集合，支持有序遍历。                     \\
+		\hline
+		\verb|BinaryHeap<T> where T: Ord|      & 最大堆。                                    \\
+		\hline
+	\end{tabular}
+	\caption{Rust 集合}
+\end{table}
+
+\subsection{\href{https://doc.rust-lang.org/std/iter/trait.Iterator.html}{迭代器}}
+迭代器是任何实现了 @std::iter::Iterator@ 特型的值。
+而 @IntoIterator@ 则表示可被转换为迭代器的类型（即“可迭代者”）。
+大多数集合类型都提供了 @iter@ 和 @iter_mut@ 方法，用于生成迭代器。
+如果某个类型实现了 @IntoIterator@ 特型，也可以通过调用 @into_iter@ 方法直接创建迭代器，
+要注意的是：表达式 @favorites.iter()@ 等价于 @(&favorites).into_iter()@。
+
+@from_fn@ 可以根据提供的函数生成迭代器，如果后续值依赖前一个值，则应使用 @successors@，
+这两个函数用于生成迭代器，应作为最后的选择。此外，drain 方法也能通过“抽取”集合中的元素来生成迭代器。
+需要注意的一点是，@Iterator@ 特型提供了 @size_hint@ 方法，用于返回迭代器可能产生元素的数量范围。
+
+\begin{table}[ht]
+	\centering
+	\label{tab:rust-iterator-methods}
+	\begin{tabular}{|l|l|}
+		\hline
+		\multicolumn{2}{|c|}{\textbf{迭代器适配器}}                                                 \\
+		\hline
+		\verb|map|                             & 对每个元素应用函数并返回新的迭代器。                           \\
+		\verb|filter|                          & 过滤满足条件的元素。                                   \\
+		\verb|filter_map|                      & 同时进行过滤与映射，自动跳过返回 \verb|None| 的项。             \\
+		\verb|enumerate|                       & 为每个元素附加索引（从 0 开始）。                           \\
+		\verb|take|、\verb|take_while|          & 分别迭代前 N 个元素，或在条件为真时持续迭代。                     \\
+		\verb|skip|、\verb|skip_while|          & 分别跳过前 N 个元素，或在条件为真时跳过元素。                     \\
+		\verb|chain|                           & 串联两个迭代器，依次产出其所有元素。                           \\
+		\verb|zip|                             & 将两个迭代器配对为元组。                                 \\
+		\verb|rev|                             & 反向迭代（要求实现 \verb|DoubleEndedIterator|）。       \\
+		\verb|peekable|                        & 允许在消费前预览下一个元素。                               \\
+		\verb|cycle|                           & 无限重复迭代器的内容。                                  \\
+		\verb|inspect|                         & 在每次迭代时执行副作用（常用于调试或打印）。                       \\
+		\verb|flat_map|                        & 将每个元素映射为迭代器并展平成单一序列。                         \\
+		\verb|cloned|、\verb|copied|            & 对 \verb|&T| 元素返回克隆或拷贝的值。                     \\
+		\verb|by_ref|                          & 通过可变引用继续使用原迭代器（避免其被移动）。                      \\
+		\verb|fuse|                            & 使迭代器一旦返回 \verb|None|，之后所有调用都返回 \verb|None|。  \\
+		\hline
+		\multicolumn{2}{|c|}{\textbf{消耗迭代器}}                                                  \\
+		\hline
+		\verb|collect|                         & 将迭代器收集为集合（如 \verb|Vec|、\verb|HashSet| 等）。    \\
+		\verb|for_each|、\verb|try_for_each|    & 对每个元素执行给定函数。                                 \\
+		\verb|fold|、\verb|rfold|               & 从初始值开始进行累积计算，\verb|rfold| 从后向前累积。            \\
+		\verb|try_fold|、\verb|try_rfold|       & 类似 \verb|fold|和\verb|rfold|，但在遇到错误时可提前短路。    \\
+		\verb|count|、\verb|sum|、\verb|product| & 分别返回元素数量、求和或求乘积。                             \\
+		\verb|min|、\verb|max|                  & 返回最小值或最大值（元素需实现 \verb|Ord|）。                 \\
+		\verb|min_by|、\verb|max_by|            & 根据提供的比较函数返回最小值或最大值。                          \\
+		\verb|min_by_key|、\verb|max_by_key|    & 根据提供的键函数返回最小值或最大值。                           \\
+		\verb|any|、\verb|all|                  & 判断是否任一元素或所有元素满足条件，只会消耗尽可能少的值。                \\
+		\verb|find|、\verb|rfind|               & 返回第一个（或最后一个）满足条件的元素。                         \\
+		\verb|find_map|                        & 对找到的元素应用函数并返回 Some 值。                        \\
+		\verb|position|、\verb|rposition|       & 返回满足条件元素的索引，r需要迭代器满足\verb|ExactSizeIterator| \\
+		\verb|nth|、\verb|nth_back|             & 分别返回从前面或从后面数的第 N 个元素（从 0 开始计数）。              \\
+		\verb|last|                            & 返回迭代器的最后一个元素，消耗所有元素。                         \\
+		\verb|partition|                       & 根据谓词拆分为两个集合：满足条件和不满足条件。                      \\
+		\verb|extend|                          & 将迭代器的所有元素追加到已有集合中，需要实现\verb|Extend|特型。       \\
+		\hline
+	\end{tabular}
+	\caption{Rust 中常见迭代器方法}
+\end{table}

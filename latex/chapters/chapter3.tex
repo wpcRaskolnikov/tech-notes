@@ -1,0 +1,71 @@
+\section{段落与图表}
+\subsection{段落}
+段落的缩进长度由 @\parindent@ 控制，可以使用 @\indent@ 产生缩进，也可以用 @\noindent@ 取消缩进。
+段落之间的间距由 @\parskip@ 决定，默认值为 0pt plus 1pt，这是一个橡皮长度（rubber length），
+表示基本长度为 0pt，但可以伸长至 1pt。通过 @\setlength{\parskip}{0pt}@ 可以将其调整为固定长度。
+
+段落的对齐默认是两端对齐，也可以使用 @\raggedright@、@\raggedleft@ 或 @\centering@ 设置左对齐、右对齐或居中。
+类似地，还可以使用 @flushleft@、@flushright@ 或 @center@ 环境进行排版。
+如果希望首字符下沉，可使用 \emph{lettrine} 宏包；若需要更多段落形状的控制，可以尝试 \emph{shapepar} 宏包。
+
+段落间的垂直间距可以使用@\vspace{}@指定，也可以使用预定义命令@\smallskip@、@\midskip@、@\bigskip@。
+如果需要强制分页，可以使用@\newpage@或@\clearpage@命令。
+
+特殊文本段落在\LaTeX 中以环境的形式给出，常用有：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 引用环境@quote@和@quotation@，前者适合一段文字，后者适合多段文字；
+	\item 诗歌环境@verse@;
+	\item 摘要环境@abstract@，摘要的标题由@\abstractname@变量提供；
+	\item 列表环境@itemsize@、@enumerate@和@description@，需要定制列表的话可以尝试\emph{enumitem}宏包;
+	\item 抄录环境@verbatim@，如果需要抄录文件，可以使用\emph{verbatim}宏包，另外，\emph{shortvrb}宏包提供了@\verb@命令的简写；
+	\item 代码环境：\emph{listing}宏包中@lstlisting@，算法宏包有\emph{clrscode}、\emph{algorithm2e}和\emph{algorithmicx}；
+	\item 制表环境@tabbing@；
+	\item 数学环境：普通公式@equation@，分行公式@multline@和@split@；
+	\item 矩阵环境：\emph{amsmath}宏包中的@matrix@、@bmatrix@、@pmatrix@和@vmatrix@；
+	\item 多行公式：@gather@、@align@、@flalign@和@alignat@；
+	\item 色块环境：\emph{tcolorbox}宏包中的同名环境；
+\end{itemize}
+
+\subsection{图表}
+图的排版比较固定（需要导入\emph{graphicx}宏包）：
+\begin{code}
+\begin{verbatim}
+	\begin{figure}[ht] % 可以出现在文本所在处（here）和页顶部（top）
+		\centering
+		\includegraphics[width=0.3\textwidth]{1.pdf}
+		\caption{示例} % 自动编号和标题
+		\label{fig:example} % 定义标签，可以被\ref引用
+	\end{figure}
+\end{verbatim}
+\end{code}
+
+表的话和图类似，不过有几点需要注意。
+在数学环境中，表格可以使用 @array@ 环境进行排版。
+如果需要并排展示图表，可以使用 \emph{subcaption} 宏包中的 @subfigure@ 和 @subtable@ 环境，实现子图或子表的布局。
+此外，还有一些特殊的表格项：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 跨列单元格可以使用 @\multicolumn{n}{|c|}{Text}@ 命令创建。
+	\item 跨行单元格可以使用 @\multirow{n}{*}{Text}@ 命令实现（需要 \emph{multirow} 宏包）。
+	\item 表格线可以用 @\hline@ 命令绘制。
+\end{itemize}
+
+\begin{code}[title=表的模板]
+\begin{verbatim}
+	% 表：不居中且不加标题是为了让表格和正文连接
+	\begin{table}[H] % 需要引入float宏包，H表示强制不浮动，放在当前位置
+		\begin{tabular}{|rrr|}
+			\hline
+			直角边 $a$ & 直角边 $b$ & 斜边 $c$\\
+			\hline
+			3 & 4 & 5\\
+			5 & 12 & 13\\
+			\hline
+		\end{tabular}% % 这一个%注释掉换行，阻止换行产生空格
+		\qquad % 产生2em的空格
+		($a^2 + b^2 = c^2$)
+	\end{table} 
+\end{verbatim}
+\end{code}
+
+
+

@@ -1,0 +1,132 @@
+\section{对象}
+\subsection{普通对象}
+对象是属性的无序集合，每个属性都由一个名字和一个值组成。
+此外，每个属性还具有三个 属性特性（property attributes）：
+\begin{itemize}
+	\item writable（可写）：指定属性的值是否可以被修改。
+	\item configurable（可配置）：指定属性是否可以被删除，以及其特性是否可以被重新定义。
+	\item enumerable（可枚举）：指定属性名是否会在 for/in 循环中被枚举出来。
+\end{itemize}
+
+\subsubsection{创建对象}
+对象可以通过对象字面量、new关键字和Object.create()函数来创建。
+使用 new 操作符时，会创建并初始化一个新对象，new 后必须跟随一个构造函数调用。
+使用 Object.create() 时，会创建一个新对象，并将其第一个参数作为新对象的原型。
+这种方式常用于创建继承自某个对象的实例，同时避免对原型对象本身的直接修改。
+
+通过对象字面量创建的对象，都共享同一个原型对象，即 Object.prototype。
+使用 new 关键字和构造函数创建的对象，则会以该构造函数的 prototype 属性作为它们的原型。
+例如，通过 new Array() 创建的对象，其原型就是 Array.prototype。
+几乎所有对象都有原型，但只有少数对象拥有 prototype 属性。
+正是这些带有 prototype 属性的对象，决定并定义了其他对象所继承的原型链结构。
+
+\subsubsection{操作属性}
+查询不存在的属性不是错误，而是返回 undefined。
+delete操作符用来删除属性，不过只能删除自有属性，不能删除继承属性。
+类似的，hasOwnProperty()方法用于测试对象是否有给定名字的属性，也只能测试自有属性。
+
+枚举属性：
+\begin{itemize}
+	\item for/in循环，遍历所有可枚举属性。
+	\item Object.keys()返回可枚举自有属性名的数组，不包含名字是符号的属性。
+	\item Object.getOwnPropertyNames()返回所有自有属性名的数组，不包含名字是符号的属性。
+	\item Object.getOwnPropertySymbols()返回所有自有属性的符号名的数组。
+	\item Reflect.ownKeys()返回所有属性名的数组。
+\end{itemize}
+
+\subsubsection{扩展对象}
+Object.assign()接收两个或多个对象作为其参数。它会修改并返回第一个参数，对于之后的参数，
+它会把该对象的可枚举自有属性复制到目标对象。它按照参数列表顺序逐个处理对象，
+第一个对象的属性会覆盖目标对象的同名属性，而第二个对象的属性会覆盖第一个对象的同名属性。
+
+将属性从一个对象分配到另一个对象的一个原因是，如果有一个默认对象为很多属性定义了默认值，
+可以将这些默认属性复制到另一个对象中。
+\begin{verbatim}
+    o = Object.assign({}, defaults, o); //将defaults的属性复制到o中
+    o = {...defaults, ...o}; //与上式等价
+\end{verbatim}
+
+\subsubsection{序列化对象}
+对象序列化（serialization） 指的是将对象转换为字符串的过程。
+在 JavaScript 中，可以使用 JSON.stringify() 将对象序列化为字符串，再通过 JSON.parse() 将其还原为对象。
+JSON.stringify() 只会序列化对象的可枚举自有属性。
+JSON（JavaScript Object Notation）是一种数据格式，其语法是 JavaScript 语法的一个子集。
+
+可被序列化和恢复的值包括：对象、数组、字符串、有限数值、true、false 和 null。
+NaN、Infinity 和 -Infinity 会被序列化为 null。
+Date 对象会被序列化为 ISO 格式的日期字符串，但 JSON.parse() 只会将其恢复为普通字符串，而不会还原为 Date 对象。
+函数、RegExp、Error 对象以及 undefined 无法被序列化或恢复。
+
+\subsubsection{对象字面量语法}
+对象字面量支持简写语法、计算属性名和扩展操作符。
+\begin{verbatim}
+    let x = 1, y = 2;
+    //下式等价于 {x: x, y: y, area: function() { return x * y }}
+    let o = {x, y, area(){ return x * y}}; 
+
+    const property_name="p";
+    let o2 = {[property_name]: 42}; //等价于 {p: 42}
+
+    let position = {x: 1, y: 2};
+    let dimensions = {width: 100, height: 75};
+    //下式等价于 {x: 1, y: 2, width: 100, height: 75}
+    let rect = {...position, ...dimensions}; 
+\end{verbatim}
+
+除了数据属性之外，JavaScript还支持为对象定义访问器属性（accessor property），
+访问器属性并不是一个存储值的属性，而是由两个方法组成：获取方法（getter）和设置方法（setter）。
+当程序读取该属性的值时，会调用获取方法，其返回值就是属性访问表达式的结果。
+当程序为该属性赋值时，会调用设置方法，并将赋值语句右侧的值作为参数传入。
+\begin{verbatim}
+    let o = {
+        a: 0,
+        get next() { return this.a++; },
+        set next(n) { this.a = n; } 
+    };
+\end{verbatim}
+
+\subsection{数组}
+大多数数组方法都支持一个回调函数参数，该函数会依次接收三个参数：当前元素的值、元素的索引以及整个数组。
+
+flatMap() 与 map() 类似，但它会在映射的同时自动进行打平操作。
+调用 a.flatMap(f) 的效果等同于（但效率远高于）a.map(f).flat()。
+你可以将 flatMap() 理解为更灵活的 map()：它不仅能把输入数组中的一个元素映射为一个结果，还可以映射为多个结果，甚至是一个空数组。
+如果某个元素被映射为空数组，那么在打平后，该元素就不会出现在输出数组中。
+
+在 JavaScript 中，类数组对象并不会继承 Array.prototype，因此无法直接调用数组的方法。
+不过可以借助 Array.prototype.call() 来调用数组方法，或者使用 Array.from() 方法将类数组对象转换为真正的数组。
+
+\subsection{函数}
+\subsubsection{定义函数}
+函数可以通过函数声明、函数表达式和箭头函数来定义。
+函数声明的定义会被提升到顶部，因此如果你不需要提升定义，请使用其他两种定义方式。
+\begin{verbatim}
+    // 函数声明
+    function f(x) {
+        return x * x;
+    }
+    // 函数表达式
+    const f = function(x) {
+        return x * x;
+    };
+    // 箭头函数
+    const f = (x) => x * x;
+\end{verbatim}
+
+\subsubsection{函数调用}
+在 JavaScript 中，this 关键字不像普通变量那样具有作用域机制，嵌套函数不会自动继承外层函数的 this 值。
+为了在方法调用中正确捕获 this，可以使用 箭头函数，它会从定义时的上下文中继承 this，
+或者在调用嵌套函数时显式使用 bind()，将所需的 this 绑定到函数上。
+
+此外，call() 和 apply() 方法可以间接调用一个函数，使其在指定对象的上下文中执行，就好像该函数是该对象的方法一样。
+需要注意的是，箭头函数的 this 是在定义时绑定的，它继承自外层作用域，无法通过 call()、apply() 或 bind() 改写。
+
+JavaScript 函数支持参数解构。
+\begin{verbatim}
+    function f({x, y}) {
+        return x * x + y * y;
+    }
+    f({x: 3, y: 4}); // 25  
+\end{verbatim}
+
+

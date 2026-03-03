@@ -1,0 +1,58 @@
+\documentclass[UTF8]{ctexart}
+\usepackage[top=1.2in,bottom=1.2in,left=1.25in,right=1in]{geometry}
+\usepackage[colorlinks=true, urlcolor=blue]{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\lstdefinestyle{mystyle}{
+    language=Python,
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red!70!brown},
+    commentstyle=\color{gray!60}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false
+}
+\lstset{style=mystyle}
+
+\title{Manage Google Sheets with Python}
+\author{wpc}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Getting setup}
+\begin{enumerate}
+	\item \textbf{Create a new project}：\href{https://console.developers.google.com/}{the Google Developer Console}.
+	\item \textbf{Enable Google Sheets API}：\href{https://console.cloud.google.com/apis}{APIs and Services}.
+	\item \textbf{Create Service account}：\href{https://console.cloud.google.com/apis/credentials}{Credentials}.
+	\item \textbf{Manage service accounts}：\href{https://console.cloud.google.com/iam-admin/serviceaccounts}{Manage service accounts}.
+	\item \textbf{Create JSON key}：Click on a service account and then select “Manage keys.” Then, click on ADD KEY.
+	\item \textbf{Copy email address}: Copy the service account's email address.
+	\item \textbf{Share file}: Go to the \href{https://drive.google.com/drive/home}{Google Drive} and share the file with the service account's email address.
+\end{enumerate}
+
+\section{Get to coding}
+Now you can use the \texttt{gspread} library to access your Google Sheets, like so:
+
+\begin{lstlisting}
+import gspread
+spreadsheet_url = ''
+gc = gspread.service_account(filename='account.json')
+sh = gc.open_by_url(spreadsheet_url)
+worksheet = sh.sheet1
+print(worksheet.get('A1'))
+\end{lstlisting}
+
+Note: \texttt{account.json} is the key file you downloaded in the previous step.
+\texttt{spreadsheet\_url} is the link to your Google Sheet.
+
+\end{document}

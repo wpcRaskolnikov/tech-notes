@@ -1,0 +1,83 @@
+\section{流密码}
+流密码（Stream Cipher）通常用于实时通信和数据流加密，它将明文的每个字符与一个伪随机生成的密钥字符进行异或操作，从而生成密文。
+按照密钥流是否独立于明文产生，流密码分为同步流密码（Synchronous Stream Cipher）和自同步流密码（Self-synchronizing Stream Cipher）。
+流密码的加密是直接把明文与密钥流进行异或操作，公式为：
+$$c_i = m_i \oplus k_i$$
+其中，$m_i$是明文的第i个字符，$k_i$是密钥流的第i个字符，$c_i$是密文的第i个字符。
+
+\subsection{线性反馈移位寄存器}
+线性反馈移位寄存器（Linear Feedback Shift Register, LFSR）是一种常用的伪随机数生成器，流密码中密钥流的产生通常通过多个LFSR的并联或串联实现。
+GF\footnote{伽罗瓦域（Galois Field）}(2)上的n级LFSR由n个位存储器和一个反馈函数$f(a)$组成，当移位时钟脉冲到来时，
+每一级存储器$a_i$都把内容一传递到下一级$a_{i-1}$，而最高位$a_n$则从反馈函数$f(a)$中获取新值，$a_1$为输出值。
+n级LFSR的输出序列$a_i$满足如下线性递推关系：
+$$
+a_i = c_1 a_{i-1} \oplus c_2 a_{i-2} \oplus \cdots \oplus c_n a_{i-n}, \quad c_j \in \mathrm{GF}(2)
+$$
+这种关系可以用一个一元多项式表示，这个多项式也称为LFSR的特征多项式（Characteristic Polynomial）：
+$$
+P(x) = x^n + c_1 x^{n-1} + c_2 x^{n-2} + \cdots + c_n
+$$
+当且仅当特征多项式为本原多项式（Primitive Polynomial）时，LFSR可以生成m序列\footnote{序列周期达到最大值$2^n - 1$}。
+
+\subsection{非线性组合子系统}
+为了使得密钥流尽可能复杂，常使用非线性组合子系统（Nonlinear Combination Generator），
+它通过多个LFSR的输出进行非线性组合来生成密钥流。非线性组合子系统通常使用逻辑门（如与门、或门、异或门等）对多个LFSR的输出进行组合，
+这样可以增加密钥流的复杂性和安全性，使得攻击者更难以预测或重建密钥流。
+常用非线性组合子系统有：Geffe序列生成器、J-K触发器、Pless生成器、钟控序列生成器等。
+
+\subsection{RC4}
+RC4（Rivest Cipher 4）是由密码学家 Ron Rivest 在 1987 年设计的流密码。
+RC4 加密过程分为两部分：密钥调度算法（Key Scheduling Algorithm，KSA）和伪随机生成算法（Pseudo-Random Generation Algorithm，PRGA）。
+KSA阶段，先初始化一个长度为 256 的数组S盒，再使用密钥打乱S盒的顺序。
+PRGA阶段，使用S盒生成伪随机字节流，并与明文进行异或操作得到密文。
+
+% --- KSA ---
+\begin{algorithm}
+\caption{RC4 Key Scheduling Algorithm (KSA)}
+\begin{algorithmic}[1]
+\Procedure{KSA}{$\text{key}[0 \ldots \text{keylen}-1]$}
+    \State Initialize $S[0 \ldots 255] \gets [0, 1, 2, \ldots, 255]$
+    \State $j \gets 0$
+    \For{$i \gets 0$ to $255$}
+        \State $j \gets (j + S[i] + \text{key}[i \bmod \text{keylen}]) \bmod 256$
+        \State swap $S[i]$ and $S[j]$
+    \EndFor
+    \State \Return $S$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+% --- PRGA ---
+\begin{algorithm}
+\caption{RC4 Pseudo-Random Generation Algorithm (PRGA)}
+\begin{algorithmic}[1]
+\Procedure{PRGA}{$S, \text{len}$}
+    \State $i \gets 0$, $j \gets 0$
+    \For{$k \gets 0$ to $\text{len}-1$}
+        \State $i \gets (i + 1) \bmod 256$
+        \State $j \gets (j + S[i]) \bmod 256$
+        \State swap $S[i]$ and $S[j]$
+        \State $t \gets (S[i] + S[j]) \bmod 256$
+        \State $K[k] \gets S[t]$ \Comment{生成第 $k$ 个密钥字节}
+    \EndFor
+    \State \Return $K$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+% --- 加密过程 ---
+\begin{algorithm}
+\caption{RC4 Encryption}
+\begin{algorithmic}[1]
+\Procedure{RC4\_Encrypt}{$\text{plaintext}, \text{key}$}
+    \State $S \gets$ \Call{KSA}{$\text{key}$}
+    \State $K \gets$ \Call{PRGA}{$S,\ \text{len}(\text{plaintext})$}
+    \For{$i \gets 0$ to $\text{len}(\text{plaintext}) - 1$}
+        \State $\text{cipher}[i] \gets \text{plaintext}[i] \oplus K[i]$
+    \EndFor
+    \State \Return $\text{cipher}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+

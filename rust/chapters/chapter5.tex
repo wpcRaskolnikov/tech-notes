@@ -1,0 +1,94 @@
+\section{并发}
+\subsection{并发}
+Rust 中的线程安全体系依赖两个核心内置特型：@std::marker::Send@ 和 @std::marker::Sync@。
+\begin{itemize}[itemsep=0.25em, parsep=0pt]
+    \item Send：表示类型的值可以安全地移动到另一个线程。
+    \item Sync：表示类型的不可变引用可以安全地在多个线程之间共享。
+\end{itemize}
+
+\begin{code}[title=fork and join]
+    \begin{verbatim}
+use std::{io, thread};
+
+fn process_files_in_parallel(filenames: Vec<String>) -> io::Result<()> {
+    const NTHREADS: usize = 8;
+    let worklists = split_vec_into_chunks(filenames, NTHREADS);
+
+    // fork
+    let mut thread_handles = vec![];
+    for worklist in worklists {
+        thread_handles.push(
+            thread::spawn(move || process_files(worklist))
+        );
+    }
+    // join
+    for handle in thread_handles {
+        // std::thread::Result<std::io::Reault<()>>
+        handle.join().unwrap()?;  
+    }
+    Ok(())
+}
+\end{verbatim}
+\end{code}
+
+如果需要在多个线程之间共享同一份数据，应使用 @Arc<T>@ 来实现安全的多线程共享，
+每次在创建线程时，使用 @data.clone()@ 传递给此线程。
+
+\begin{code}[title=rayon]
+    \begin{verbatim}
+use rayon::prelude::*;
+
+// "Do two things in parallel"
+let (v1, v2) = rayon::join(fn1, fn2);
+
+// "Do N things in parallel"
+giant_vector.par_iter().for_each(|value| {
+    do_thing_with_value(value);
+});
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=channel]
+    \begin{verbatim}
+fn start_file_reader_thread(documents: Vec<PathBuf>)
+    -> (mpsc::Receiver<String>, thread::JoinHandle<io::Result<()>>) 
+{
+    let (sender, receiver) = mpsc::channel();
+
+    let handle = thread::spawn(move || {
+        ... 
+    });
+    (receiver, handle)
+}
+\end{verbatim}
+\end{code}
+
+当发送端产生值的速度快于接收端接收和处理值的速度时，通道中未处理的消息会不断积压，
+为了解决这种背压问题，可以使用同步通道（@std::sync::mpsc::sync_channel@）。
+
+\begin{code}[title=pipeline]
+    \begin{verbatim}
+fn run_pipeline(documents: Vec<PathBuf>, output_dir: PathBuf)
+ -> io::Result<()> {
+    // Start all 5 stages of the processing pipeline
+    let (texts, h1) = start_file_reader_thread(documents);
+    let (pints, h2) = start_file_indexing_thread(texts);
+    let (gallons, h3) = start_in_memory_merge_thread(pints);
+    let (files, h4) = start_index_writer_thread(gallons, &output_dir);
+    let result = merge_index_files(files, &output_dir);
+
+    // Wait for all threads to finish
+    let r1 = h1.join().unwrap();
+    h2.join().unwrap();
+    h3.join().unwrap();
+    let r4 = h4.join().unwrap();
+
+    // Return the first error encountered (if any)
+    // Note: h2 and h3 won't fail
+    r1?;
+    r4?;
+    result
+}
+\end{verbatim}
+\end{code}
+

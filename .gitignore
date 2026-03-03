@@ -1,0 +1,69 @@
+# LaTeX 编译生成的文件
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+
+# LaTeX 中间文件
+*.dvi
+*.xdv
+*-converted-to.*
+
+# LaTeX 临时文件
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+# LaTeX 同步文件
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# LaTeX 构建工具
+*.fdb_latexmk
+*.ilg
+*.ind
+
+# LaTeX 临时目录
+latex.out/
+
+# LaTeXindent 备份文件
+*.bak[0-9]*
+indent.log
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 编辑器临时文件
+*~
+*.swp
+*.swo
+*.swn
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 临时文件
+*.tmp
+*.temp
+*.bak

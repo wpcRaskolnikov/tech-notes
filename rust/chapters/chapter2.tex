@@ -1,0 +1,62 @@
+\section{Rust语法}
+\subsection{表达式}
+Rust中没有语句，只有表达式。块表达式的值是块中最后一个表达式的值，if表达式的所有块都必须生成同样类型的值，
+if let表达式是match表达式只有两种情况的简写，通常使用if let从Option或者Result中获取数据，也有while let表达式。
+loop表达式用来编写无限循环。
+
+\subsection{所有权}
+在Rust中，为变量赋值、函数参数传递和函数返回时，所有权会被移动。
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 大多数类型的赋值会将值转移给目标，而源会回到未初始化状态。
+	\item 变量离开作用域时，值会被丢弃（drop）。
+	\item 通过引用传递变量时，所有权不会被移动。
+	\item 可以使用@clone()@方法来显式复制数据。
+\end{itemize}
+
+注意并非所有类型值的拥有者都能变成未初始化状态，例如数组和向量类型，不能将其中某个索引处的值移动走。
+如果你真的要实现这样的效果，建议创建一个包含Option<T>字段的结构体，然后将该字段设置为None，
+Rust专门为这种操作定义了一个函数，@std::mem::take@，它会将字段值替换为默认值，并返回原来的值。
+
+有些类型实现了Copy trait，这些类型的值在赋值时不会移动所有权，而是进行复制。
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 所有整数类型、浮点数类型、char类型和bool类型都是Copy类型。
+	\item 所有共享引用类型都是Copy类型。
+	\item 元组类型当且仅当其所有元素类型都是Copy类型时，才是Copy类型。
+\end{itemize}
+
+Rust通过引用计数指针类型Rc<T>和Arc<T>来实现共享所有权，他们之间的唯一区别就是Arc可以安全地在多线程间共享。
+
+\subsection{错误处理}
+Rust的错误处理使用panic和Result。
+当数组越界、整数除以0、断言失败或者在Err的Result上调用expect或unwrap时，程序会调用panic宏并中止执行。
+panic宏会打印错误信息和调用栈，然后展开栈并清理资源，最后终止线程，如果线程为主线程，程序也会终止。
+
+建议使用expect代替unwrap，如果有默认值的话，可以使用@unwrap_or@和@unwrap_or_else@。
+如果需要传播错误，可以使用@?@运算符，不过它只能用于返回Result或Option的函数中，
+如果需要自定义错误类型，可以考虑使用thiserror库，如果需要更强大的错误处理，可以使用anyhow库。
+
+\subsection{模块}
+使用cargo 编译库代码时，使用@--crate-type lib@选项，会告诉编译器不去寻找main函数，
+而是生成一个rlib文件。@cargo build --release@会生成优化过的程序，运行更快，编译时间更长。
+Cargo.toml文件中可以指定crate的名称、版本、作者等信息，不同编译命令对应的区段不同。
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{编译命令}                  & \textbf{区段}  \\ \hline
+		@cargo build@           & @[profile.dev]@     \\ \hline
+		@cargo build --release@ & @[profile.release]@ \\ \hline
+		@cargo test@            & @[profile.test]@    \\ \hline
+	\end{tabular}
+	\caption{Cargo 对应 Profile 区段}
+\end{table}
+
+pub声明可以导出语法项，pub(crate)表示在当前crate内可见，pub(super)表示在父模块可见，
+任何未标记为pub的内容都只能在定义它的模块及其子模块内使用。
+
+子模块声明语法为mod spores;，这会让编译器检查spores.rs和spores/mod.rs文件。
+如果把子模块按文件夹组织，则可以在文件夹中添加mod.rs文件来声明子模块：pub mod spores;。
+
+crate指的是当前模块所在的crate，super指的是父模块，self指的是当前模块。可以通过use super::*访问父模块中的私有语法项。
+模块和文件系统有些类似之处：use创建别名，self和super类似@./@和@../@，crate类似当前项目根目录。
+如果在模块中使用pub use公开了语法项，则可以通过use prelude::*来导入这些语法项。

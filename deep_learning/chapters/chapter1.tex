@@ -1,0 +1,106 @@
+\section{感知机}
+\subsection{感知机简介}
+感知机（Perceptron）由美国学者 Frank Rosenblatt 于 1957 年提出，作为神经网络最早期的算法之一，
+感知机奠定了深度学习发展的基础，至今仍具有重要的学习和研究价值。
+
+图 \ref{fig:perceptron} 是一个接收两个输入信号的感知机的例子。
+感知机接收多个输入信号，并输出一个信号，在感知机模型中，输入与输出的信号通常是二值信号（0/1）。
+$x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重。图中的 $\bigcirc$ 代表“神经元”。
+输入信号被送往神经元时，会被分别乘以固定的权重，神经元会计算传送过来的信号的总和，
+当这个总和超过了某个阈值 $\theta$，神经元输出 1，这也被称为“神经元被激活”。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.3\textwidth, keepaspectratio]{1-1.png}
+	\caption{感知机示例}
+	\label{fig:perceptron}
+\end{figure}
+
+把上述内容用数学式来表示。
+\begin{equation*}
+	y =
+	\begin{cases}
+		0, & w_1 x_1 + w_2 x_2 \leq \theta \\
+		1, & w_1 x_1 + w_2 x_2 > \theta
+	\end{cases}
+\end{equation*}
+
+\subsection{实现与门}
+下面考虑用感知机来实现与门，表~\ref{tab:and-truth-table} 是与门的真值表。
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|c|c|c|}
+		\hline
+		$x_1$ & $x_2$ & $y = x_1 \land x_2$ \\
+		\hline
+		0     & 0     & 0                   \\
+		0     & 1     & 0                   \\
+		1     & 0     & 0                   \\
+		1     & 1     & 1                   \\
+		\hline
+	\end{tabular}
+	\caption{与门的真值表}
+	\label{tab:and-truth-table}
+\end{table}
+
+我们需要做的就是确定能满足真值表的 $w_1$、$w_2$、$\theta$ 的值。
+实际上，参数的选择方法有无数多种。比如，当 $(w_1, w_2, \theta) = (0.5, 0.5, 0.7)$ 时，
+可以满足条件。此外，当 $(w_1, w_2, \theta) = (0.5, 0.5, 0.8)$ 或者 $(1.0, 1.0, 1.0)$ 时，
+同样也满足与门的条件。设定这样的参数后，仅当 $x_1$ 和 $x_2$ 同时为1时，信号的加权总和才会超过给定的阈值 $\theta$。
+
+为了数学表达的简洁性，我们先把上面感知机实现的数学式子改写一下，用偏置 $b$ 代替阈值 $\theta$，注意 $b = -\theta$。
+\begin{equation*}
+	y =
+	\begin{cases}
+		0, & b + w_1 x_1 + w_2 x_2 \leq 0 \\
+		1, & b + w_1 x_1 + w_2 x_2 > 0
+	\end{cases}
+\end{equation*}
+
+\subsection{局限性}
+前面我们用感知机实现了与门，现在，我们来探讨一个更具挑战性的例子——异或门。
+表~\ref{xor-truth-table} 是异或门的真值表，应该设定什么样的参数能满足这个真值表呢？
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|c|c|c|}
+		\hline
+		$x_1$ & $x_2$ & $y = x_1 \oplus x_2$ \\
+		0     & 0     & 0                    \\
+		0     & 1     & 1                    \\
+		1     & 0     & 1                    \\
+		1     & 1     & 0                    \\
+		\hline
+	\end{tabular}
+	\caption{异或门的真值表}
+	\label{xor-truth-table}
+\end{table}
+
+实际上，用前面介绍的感知机是无法实现这个异或门的。
+思考感知机如何实现与门的，其实是感知机生成一条直线来划分空间，
+以我们之前实现的与门为例，生成的直线为 $-0.8 + 0.5x_1 + 0.5x_2 = 0$。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-2.png}
+	\caption{与门可视化}
+	\label{fig:and_gate}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-3.png}
+	\caption{异或门可视化}
+	\label{fig:xor_gate}
+\end{figure}
+
+想要用一条直线将图 \ref{fig:xor_gate} 中的数据分开，是做不到的。
+感知机只能表示线性可分的空间，不过，就如同我们能通过与门、与非门、或门构建异或门，
+我们也能够通过“多层叠加”感知机来处理非线性可分的问题。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{1-4.png}
+	\caption{通过组合实现异或门}
+\end{figure}

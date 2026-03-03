@@ -1,0 +1,96 @@
+\section{Git}
+\subsection{暂存}
+查看配置和状态：
+\begin{verbatim}
+	git config --list       # 查看所有 Git 配置
+	git status -s           # 查看状态，左边是暂存区，右边是工作区
+\end{verbatim}
+
+\begin{verbatim}
+	git add <file>           # 将新建文件加入 Git 追踪
+	git rm --cached <file>   # 取消追踪文件
+	git mv <old> <new>       # 重命名文件
+	git ls-files             # 列出暂存区文件
+\end{verbatim}
+
+对比差异：
+\begin{verbatim}
+	git diff                 # 工作区与暂存区
+	git diff --staged        # 暂存区与版本库
+\end{verbatim}
+
+应用补丁：
+\begin{verbatim}
+	git apply --stat xxx.patch
+	git apply --check xxx.patch
+	git apply xxx.patch
+\end{verbatim}
+
+删除未跟踪文件：
+\begin{verbatim}
+	git clean -dn   # 预览
+	git clean -df   # 执行
+\end{verbatim}
+
+\subsection{提交}
+\begin{verbatim}
+	git log                   # 查看提交日志
+	git reflog                # 查看引用日志
+	git commit -am "msg"      # 提交暂存区和修改
+	git commit --amend        # 修改上一次提交
+\end{verbatim}
+
+\begin{code}[title=tag]
+	\begin{verbatim}
+git tag <tag>			# 标记版本
+git tag -d <tag>		# 删除标签
+git push --tags			# 推送所有标签到远程仓库
+git push --delete <remote> <tag>	# 删除远程标签
+\end{verbatim}
+\end{code}
+
+\begin{code}[title=branch]
+	\begin{verbatim}
+git branch -vv             # 列出分支及跟踪信息
+git branch <name>          # 创建分支
+git branch -d <name>       # 删除分支
+git branch -m <name> <new>       # 重命名分支
+--set-upstream-to=<remote>/<branch> <branch>  # 设置分支跟踪信息
+
+git switch <branch>        # 切换分支
+git switch -c <branch>     # 创建并切换分支
+git switch -c <branch> --track <remote>/<branch>  # 跟踪远程分支
+git merge <branch>         # 移动当前分支与指定分支合并
+git rebase --onto <new> <old>...   # 可以将老分支的修改在新分支上重现
+\end{verbatim}
+\end{code}
+
+\subsection{恢复}
+\begin{verbatim}
+	git restore <file>           # 从暂存区恢复工作区
+	git restore --staged <file>  # 暂存区退回上次提交
+	git restore -s <hash> <file> # 从指定提交恢复工作区
+	git reset --soft <hash>      # 仅移动 HEAD
+	git reset --mixed <hash>     # 移动 HEAD 并重置暂存区
+	git reset --hard <hash>      # HEAD、暂存区和工作区全部回退
+\end{verbatim}
+
+\begin{code}[title=remote]
+	\begin{verbatim}
+git remote -v                 # 查看远程仓库
+git remote show <remote>      # 查看远程分支信息
+git remote add <name> <url>   # 添加远程仓库
+git remote rename <old> <new> # 重命名远程仓库
+git remote rm <name>          # 删除远程仓库
+git fetch                     # 获取远程分支
+git push <remote> <branch>    # 推送本地分支
+git push <remote> --delete <branch>    # 删除远程分支
+git pull                      # fetch + merge
+\end{verbatim}
+\end{code}
+
+\subsection{匹配规则语法}
+.gitignore 忽略文件：\verb|*| 匹配任意字符（不跨目录），\verb|**| 匹配任意中间目录层级，
+\verb|/| 末尾表示目录，否则目录和文件都匹配，\verb|!| 可取消匹配规则。
+
+

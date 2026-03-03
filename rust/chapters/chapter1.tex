@@ -1,0 +1,158 @@
+\section{\href{https://doc.rust-lang.org/reference/types.html}{Rust类型}}
+\subsection{\href{https://rustup.rs}{Rust安装}}
+通过 rustup 安装 Rust 后，会自动配置 Rust 的包管理器 \href{https://doc.rust-lang.org/cargo/}{Cargo}、
+编译器 \href{https://doc.rust-lang.org/rustc/}{rustc} 以及文档生成工具 \href{https://doc.rust-lang.org/rustdoc/}{rustdoc}。
+\href{https://doc.rust-lang.org/std/all.html}{std文档}。
+注意：如果是 Windows，需要额外下载\href{https://visualstudio.microsoft.com/zh-hans/visual-cpp-build-tools/}{c++编译工具}。
+
+安装Rust写的二进制工具可以使用cargo-binstall，自己写cli工具，打包可以用\href{https://axodotdev.github.io/cargo-dist/}{cargo-dist}工具。
+
+\begin{code}[title=dist使用示例]
+	\begin{verbatim}
+dist init
+git add .
+git commit -am 'chore: wow shiny new dist CI!'
+git push
+
+# 真正触发 GitHub CI / Release 的是 tag
+git tag v0.1.0
+git push --tags
+
+# 可选，本地构建
+dist build
+dist plan
+    \end{verbatim}
+\end{code}
+
+\subsection{数值类型}
+Rust 的其他数值类型与大多数语言类似，不过值得注意的是：
+Rust 将 u8 类型视为字节类型，字节字面量用 @b'x'@ 表示，它对应一个 u8 值；
+可以使用 as 将 u8 转换为char类型。如果需要扩展的数值类型，可以使用num库。
+Rust提供了一些常用的数学常量在 \href{https://doc.rust-lang.org/std/f32/consts/}{std::f32::consts}和\href{https://doc.rust-lang.org/std/f64/consts/}{std::f64::consts}中。
+
+当整型算术溢出时，debug build会panic，而release build会回绕，
+如果这不是你期望的行为，Rust 提供了多种显式的整型运算方法(add、sub、mul、div、rem、neg、abs、pow、shl、shr)：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 检查运算（checked）：返回结果的 Option 值： Some(v)或者None。
+	\item 回绕运算（wrapping）：如果结果溢出，返回取模后
+	\item 饱和运算（saturating）：返回可表达的最接近的值，例如@128_u8.saturating_mul(3)==255@。
+	\item 溢出运算（overflowing）：返回元组，第一个元素是回绕后的结果，第二个是bool值表示是否溢出。
+\end{itemize}
+
+\subsection{文本类型}
+Rust 字符类型 \href{https://doc.rust-lang.org/std/primitive.char.html}{char} 以32位表示unicode字符，仅允许u8类型通过as转换为char。
+Rust 的字符串类型 \href{https://doc.rust-lang.org/std/string/struct.String.html}{String} 则是一个 UTF-8 编码的字节序列，因此len返回字节数而不是字符数。
+类型关系上，@&str@类似@&[T]@，@String@则类似@Vec[T]@。
+Rust 还支持原始字符串字面量：@r""@。
+创建String的常见方式：@to_string@、@to_owned@、@format!@、@concat@和@join@。
+
+\subsection{引用}
+Rust中的引用类似C/C++中的指针，不过引用总是有效的，而且对引用赋值会让引用指向另一个值，而不是改变引用指向的值本身。
+对引用进行@.@运算符操作会隐式借用或解引用。Rust允许对任意表达式进行引用操作。
+
+Rust会为每个引用类型分配一个生命周期，这是在编译期间虚构的产物，没有运行时表示。
+生命周期存在两个约束：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item 值的生命周期必须比引用的生命周期长。
+	\item 引用必须在被初始化到最后一次使用的生命周期内都能访问。
+\end{itemize}
+
+函数签名的时候可以使用生命周期标注来指定引用的生命周期，其语法类似泛型的语法。
+例如：@fn g<'a>(p: &i32)@，这个函数的参数p的生命周期被标注为'a，意思是能接受任意涵盖函数生命周期的引用。
+如果引用类型出现在另一个类型的定义中，那么必须写出它的生命周期。
+
+\subsection{元组、数组和向量}
+Rust 元组中元素数据类型可以不同，不过只能使用常量索引元组，@()@ 表示零元组，通常用作空返回值。
+类型@[T;N]@表示元素类型为 T、长度为 N 的数组，数组索引必须为usize。
+类型@Vec<T>@表示向量。@&[T]@、@&mut [T]@分别表示共享切片与可变切片，切片包含两个值：指针和长度。
+
+@vec![2, 3, 4]@创建向量，@[0u8,1024]@创建一个1KB的数组缓存区。数组和向量的大部分方法一般是在切片上定义的，
+对数组和向量使用方法时，会隐式生产一个切片。
+
+\subsection{结构体}
+Rust 有 3 种结构体类型：具名字段型结构体、元组型结构体和单元型结构体。
+
+\begin{code}[title=结构体定义和构造]
+	\begin{verbatim}
+    struct GrayscaleMap {
+        pixels: Vec<u8>,
+        size: (usize, usize)
+    }
+    let image = GrayscaleMap {
+        pixels: vec![0; 1024 * 576],
+        size: (1024, 576)
+    };
+
+    struct Ascii(Vec<v8>); //元组结构体主要用来创造新类型
+    struct Onesuch; //单元型结构体，类似零元组
+    \end{verbatim}
+\end{code}
+
+用impl定义关联函数时，第一个参数是结构体本身，
+可以传递@self@、@&self@、@&mut self@，甚至是@Box<Self>@、@RC<Self>@或者@Arc<Self>@。
+通过@.@运算符使用方法时，Rust会自动获取对应类型的引用。
+也可以在impl块中定义类型关联函数（类似静态方法）、关联常量。
+
+当需要一个不可变结构体里面的某个数据可变时，
+数据可使用 \href{https://doc.rust-lang.org/std/cell}{std::cell} 模块中的@Cell<T>@或者@RefCell<T>@定义，
+@Cell@使用@get@和@set@方法获取和修改值，@RefCell@借用引用，使用@try_borrow@、@borrow@和@borrow_mut@等方法。
+
+\subsection{枚举与模式}
+枚举在开发中被广泛用于表示结构化数据，例如 \href{https://docs.rs/serde_json}{JSON}。
+与其他语言的枚举不同，Rust的枚举有元组变体和结构体变体，可以携带数据。
+如果你需要从整数到枚举的转换，可以使用 \href{https://docs.rs/enum_primitive}{enum\_primitive} 库。
+枚举还通常与match一起使用，进行模式匹配。
+
+\begin{code}[title=枚举的定义]
+	\begin{verbatim}
+    enum Shape {
+        Circle(f64),
+        Rectangle { width: f64, height: f64 },
+    }
+
+    enum Option<T> {
+        None,
+        Some(T),
+    }
+
+    enum Result<T,E> {
+        OK(T),
+        Err(E),
+    }
+    \end{verbatim}
+\end{code}
+
+\begin{table}[ht]
+	\centering
+	\begin{tabular}{|l|l|p{18em}|}
+		\hline
+		\textbf{模式类型} & \textbf{示例}                    & \textbf{说明}              \\ \hline
+		字面量           & @42@, @"hello"@                & 匹配与字面量相等的值，也可匹配常量。       \\ \hline
+		通配符           & @_@                            & 忽略某个值。                   \\ \hline
+		占位符           & @_x@                           & 绑定但不使用该变量，避免编译器警告。       \\ \hline
+		变量            & @name@, @mut count@            & 将值绑定到变量上。                \\ \hline
+		引用            & \verb|&x|, \verb|& mut y|      & 匹配引用类型的值，同时解引用和绑定。       \\ \hline
+		引用变量          & @ref field@, @ref mut field@   & 借用对匹配值的引用                \\ \hline
+		子模式绑定         & \verb|val @ 0 ..=99|           & 使用\verb|@|左边的变量名，匹配右边的模式 \\ \hline
+		元组模式          & @(x, y)@, @(_, b)@             & 可忽略部分元素。                 \\ \hline
+		结构体           & @Account {id, name, ..}@       & 可按字段名解构。                 \\ \hline
+		枚举模式          & @Some(value)@, @None@          & 匹配枚举变体并解构其携带的数据。         \\ \hline
+		数组/切片模式       & @[first, _, last]@             & 匹配固定长度数组或切片前后元素。         \\ \hline
+		范围模式          & @1 ..=5@, @256..@, @'a'..='k'@ & 匹配落在指定范围内的值。             \\ \hline
+		匹配守卫          & @x if x > 5@                   & 在匹配时添加条件判断。              \\ \hline
+		多重模式          & @1 | 2 | 3@                    & 匹配多个可能的模式之一。             \\ \hline
+		嵌套模式          & \texttt{Some((x, y))}          & 支持在结构内部继续进行模式匹配。         \\ \hline
+		剩余模式          & \verb|[head, tail @ ..]|       & 匹配剩余部分的数据（如切片或数组）。       \\ \hline
+	\end{tabular}
+	\caption{Rust 模式匹配类型汇总表}
+\end{table}
+
+\subsection{类型操作}
+@!@类型是一个特殊类型，通常用于表示函数不会正常返回。
+用type定义类型别名，若要从堆中分配值使用@Box::new@。
+在Rust中，有几类重要的自动类型转换，被称为隐式解引用，适用于所有实现Deref特型的类型：
+\begin{itemize}[itemsep=0pt, parsep=0pt]
+	\item @&String@会自动转换为@&str@。
+	\item @&Vec<i32>@会自动转换为@&[i32]@。
+	\item @&Box<Chess>@会自动转换为@&Chess@。
+\end{itemize}
