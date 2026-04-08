@@ -1,124 +1,51 @@
-\section{进程}
-\subsection{进程相关信息}
-进程有进程ID（Process ID，PID），init进程的PID始终为1，和文件类似，
-进程也有拥有者、用户ID和有效用户ID等。
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{进程状态} & \textbf{说明}                       \\
-		\hline
-		R             & 运行或可运行状态（正在运行或在运行队列中）。            \\
-		\hline
-		S             & 休眠状态（等待某个事件完成，比如按键按下或网络包到来）。      \\
-		\hline
-		D             & 不可中断的休眠状态（通常是IO）。                 \\
-		\hline
-		T             & 停止状态（被信号停止）。                      \\
-		\hline
-		Z             & 僵尸状态（进程已终止，但其父进程尚未调用wait()获取其状态）。 \\
-		\hline
-		<             & 高优先级进程。                           \\
-		\hline
-		N（nice）       & 低优先级进程。                           \\
-		\hline
-		L             & 进程有锁定在内存的页面。                      \\
-		\hline
-		l             & 进程有多线程。                           \\
-		\hline
-		+             & 进程在前台运行。                          \\
-	\end{tabular}
-	\caption{常见进程状态}
-\end{table}
+\section{远程桌面}
+\begin{code}[title=relay]
+	\begin{verbatim}
+services:
+  hbbs: # RustDesk ID/Rendezvous 服务器
+    container_name: hbbs
+    ports:
+      - 21115:21115 # 用于 NAT 类型测试的 TCP
+      - 21116:21116 # TCP打孔
+      - 21116:21116/udp # UDP心跳/ID服务器
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs
+    volumes:
+      - /data/rustdesk/hbbs:/root
+    environment:
+      - 'RELAY=192.168.143.6:21117' # 运行这些容器的服务器的【IP:port】或域名
+      - 'ENCRYPTED_ONLY=1' # 开启加密
+      - 'KEY=Key' # 自定义KEY，去掉这一行可以自动生成
+    depends_on:
+      - hbbr
+    restart: unless-stopped
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{列名} & \textbf{说明}           \\
-		\hline
-		USER        & 进程所有者的用户名。            \\
-		\hline
-		\%CPU       & CPU占用率。               \\
-		\hline
-		\%MEM       & 内存占用率。                \\
-		\hline
-		VSZ         & 虚拟内存大小（以KB为单位）。       \\
-		\hline
-		RSS         & 驻留集大小，物理内存大小（以KB为单位）。 \\
-		\hline
-		TTY         & 进程的控制终端，?表示没有控制终端。    \\
-		\hline
-		START       & 进程启动时间。               \\
-		\hline
-		TIME        & 进程使用的CPU时间总和。         \\
-		\hline
-	\end{tabular}
-	\caption{ps信息字段说明}
-\end{table}
+  hbbr: # RustDesk 中继服务器
+    container_name: hbbr
+    ports:
+      - 21117:21117 # TCP中继
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr
+    volumes:
+      - /data/rustdesk/hbbr:/root
+    restart: unless-stopped
+    \end{verbatim}
+\end{code}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{信息}                    & \textbf{说明}                      \\
-		\hline
-		up 6:30                        & 运行时间（uptime），自上次重启之后的时间总和（6.5h）。 \\
-		\hline
-		1 user                         & 当前登录用户数。                         \\
-		\hline
-		load average: 0.07, 0.02, 0.00 & 平均负载，分别为过去1分钟、5分钟和15分钟的平均负载。     \\
-		\hline
-		0.7 us, 0.3 sy                 & 分别是用户进程和系统（内核）进程占用CPU百分比。        \\
-		\hline
-		0.0 ni                         & 用户进程空间内低优先级进程占用CPU百分比。           \\
-		\hline
-		99.0 id, 0.0 wa                & 分别是CPU空闲和等待IO百分比。                \\
-		\hline
-		0.0 hi, 0.0 si                 & 分别是硬中断和软中断占用CPU百分比。              \\
-		\hline
-		0.0 st                         & 被虚拟机偷取的CPU百分比。                   \\
-		\hline
-	\end{tabular}
-	\caption{top总体状态说明}
-\end{table}
+\begin{code}[title=server]
+	\begin{verbatim}
+# 走中继
+sudo mkdir -p ~/.config/rustdesk
+sudo tee ~/.config/rustdesk/RustDesk2.toml > /dev/null <<'EOF'
+[options]
+custom-rendezvous-server = "192.168.143.6"
+relay-server = "192.168.143.6"
+key = "Key"
+direct-server = "Y"
+direct-access-port = "21118"
+EOF
 
-\subsection{作业控制}
-\begin{itemize}
-	\item Ctrl + Z：暂停当前前台进程，并将其放入后台。
-	\item \verb|jobs|：查看当前用户的所有作业。
-	\item \verb|fg %n|：将编号为n的后台作业调回前台。
-	\item \verb|bg %n|：将编号为n的后台作业继续在后台运行。
-	\item \verb|disown %n|：将编号为n的后台作业移出作业列表，退出shell时不会终止该作业。
-	\item \verb|nohup command &|：在后台运行command，即使退出shell，command仍会继续运行。
-\end{itemize}
-
-\subsection{信号}
-kill和pkill命令发送信号给指定进程，前者需要pid，后者可以用程序名，默认发送TERM信号（15），
-当使用ctrl + c终止前台进程时，实际上是向该进程发送INT信号（2），
-当使用ctrl + z暂停前台进程时，实际上是向该进程发送TSTP信号（20）。
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{信号} & \textbf{说明}                          \\
-		\hline
-		HUP (1)     & 终端断开连接时发送给前台进程。                      \\
-		\hline
-		INT (2)     & 中断进程，通常由Ctrl + C触发。                  \\
-		\hline
-		QUIT (3)    & 退出进程。                                \\
-		\hline
-		KILL (9)    & 内核会强制终止进程，信号其实不会发送给进程。               \\
-		\hline
-		TERM (15)   & 请求进程终止，kill默认发送信号。                   \\
-		\hline
-		CONT (18)   & 继续执行进程，bg和fg命令会发送这个信号。               \\
-		\hline
-		STOP (19)   & 停止进程，信号不会发向目标进程。                     \\
-		\hline
-		TSTP (20)   & 终端停止信号（terminal stop），通常由Ctrl + Z触发。 \\
-		\hline
-	\end{tabular}
-	\caption{常见信号及说明}
-\end{table}
+rustdesk --get-id
+rustdesk --password <your_password>
+    \end{verbatim}
+\end{code}

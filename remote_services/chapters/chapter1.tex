@@ -25,6 +25,8 @@ sudo systemctl restart vsftpd.service
 	\begin{verbatim}
 install -dm700 ~/.ssh
 scp ~/.ssh/id_ed25519.pub username@remoteip:
+cat ~/id_ed25519.pub >> ~/.ssh/authorized_keys
+rm ~/id_ed25519.pub
 chmod 600 ~/.ssh/authorized_keys
     \end{verbatim}
 \end{code}
