@@ -4,15 +4,15 @@
 	\centering
 	\begin{tabular}{|l|l|}
 		\hline
-		\textbf{快捷键}   & \textbf{说明}      \\
+		\textbf{快捷键} & \textbf{说明} \\
 		\hline
-		Ctrl + T       & 打开新标签页。         \\
+		Ctrl + T     & 打开新标签页。     \\
 		\hline
-		Ctrl + W       & 关闭标签页。         \\
+		Ctrl + W     & 关闭标签页。      \\
 		\hline
-		Ctrl + L        & 跳转地址栏。     \\
+		Ctrl + L     & 跳转地址栏。      \\
 		\hline
-		Ctrl + Tab        & 切换标签页。     \\
+		Ctrl + Tab   & 切换标签页。      \\
 		\hline
 	\end{tabular}
 	\caption{浏览器 常用快捷键}
@@ -87,6 +87,18 @@
 	\item 输入重定向：cat读取文件到标准输出，tee读取标准输入并将其同时写入标准输出和文件中，xargs将标准输入转换为命令的参数。
 \end{itemize}
 
+\begin{code}[title=常用命令示例]
+	\begin{verbatim}
+date                              # 显示当前日期时间
+wc -l file                        # 统计行数（-w词数 -c字节数）
+head -n 5 file                    # 显示前5行
+tail -n 5 file                    # 显示后5行
+tail -f file                      # 实时跟踪文件末尾（适合看日志）
+ls /bin /usr/bin | sort | uniq | less  # 管道：合并排序去重分页
+export PATH=~/bin:"$PATH"             # 将 ~/bin 追加到 PATH
+	\end{verbatim}
+\end{code}
+
 \subsection{shell 扩展}
 参数扩展、算术扩展和命令替换仍然会在双引号中进行，但单引号中所有扩展均不能用。
 \begin{itemize}
@@ -103,10 +115,106 @@
 \subsection{正则表达式}
 正则表达式中存在元字符（metacharacter）:\verb@. ? + * { } ^ $ [ ]  - ( ) | \@
 
+POSIX 字符类可用于方括号表达式中，常用的有：\texttt{[:upper:]}（大写字母）、\texttt{[:lower:]}（小写字母）、\texttt{[:alpha:]}（字母）、\texttt{[:digit:]}（数字）、\texttt{[:alnum:]}（字母和数字）、\texttt{[:space:]}（空白字符）。例如 \verb|[[:upper:]]*| 匹配以大写字母开头的任意字符串。
+
+\begin{code}[title=简写字符类（大写为补集）]
+	\begin{verbatim}
+\d  [[:digit:]]    # 数字           \D  非数字
+\s  [[:space:]]    # 空白字符       \S  非空白
+\l  [[:lower:]]    # 小写字母       \L  非小写
+\u  [[:upper:]]    # 大写字母       \U  非大写
+\w  [_[:alnum:]]   # 单词字符       \W  非单词字符
+\b  单词边界                        \B  非单词边界
+	\end{verbatim}
+\end{code}
+
+\begin{code}[title=锚点与量词]
+	\begin{verbatim}
+^       行首（在 [...] 中为取反）
+$       行尾
+^$      空行
+
+?       0 或 1 次
+*       0 或多次
++       1 或多次
+{n}     恰好 n 次
+{n,}    至少 n 次
+{n,m}   n 到 m 次（含两端）
+	\end{verbatim}
+\end{code}
+
 \subsection{历史记录}
-输出历史记录命令并执行：\verb|!-3:p|、\verb|!!|
-删除文件：先\verb|ls|，再\verb|rm !$|
-\verb|!$|表示前一个命令中的最后一个单词
 ctrl+r 搜索历史记录，esc退出搜索。
-如果你输入了错误的命令，可以运行\verb|^jg^jpg|来替换文本，注意只能替换第一次出现的字符串，
-也可以通过类似\verb|!!:s/jg/jpg/|的语法运行替换。
+
+\begin{code}[title=history]
+	\begin{verbatim}
+history 10     # 显示最近 10 条历史记录
+history -c     # 清空历史记录
+!-3:p          # 打印倒数第 3 条命令（不执行）
+rm !$          # !$ 表示上一条命令的最后一个参数，先 ls 再 rm !$
+^jg^jpg        # 将上一条命令中的 jg 替换为 jpg 并执行（只替换首次出现）
+!!:s/jg/jpg/   # 同上，替换语法的另一种写法
+	\end{verbatim}
+\end{code}
+
+\subsection{颜色}
+Shell中也能显示颜色，分为文本颜色和背景颜色，关闭颜色的代码是\verb|\033[0m|。
+\begin{table}[H]
+	\centering
+	\begin{minipage}{0.45\linewidth}
+		\centering
+		\begin{tabular}{|l|l|}
+			\hline
+			\textbf{转义代码}     & \textbf{文本颜色}    \\
+			\hline
+			\verb|\033[0;30m| & 黑色 (black)       \\
+			\verb|\033[0;31m| & 红色 (red)         \\
+			\verb|\033[0;32m| & 绿色 (green)       \\
+			\verb|\033[0;33m| & 棕色 (brown)       \\
+			\verb|\033[0;34m| & 蓝色 (blue)        \\
+			\verb|\033[0;35m| & 紫色 (magenta)     \\
+			\verb|\033[0;36m| & 青色 (cyan)        \\
+			\verb|\033[0;37m| & 浅灰色 (light grey) \\
+			\hline
+		\end{tabular}
+		\caption{常用文本颜色代码}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.45\linewidth}
+		\centering
+		\begin{tabular}{|l|l|}
+			\hline
+			\textbf{转义代码}     & \textbf{文本颜色}       \\
+			\hline
+			\verb|\033[1;30m| & 深灰色 (deep grey)     \\
+			\verb|\033[1;31m| & 浅红色 (light red)     \\
+			\verb|\033[1;32m| & 浅绿色 (light green)   \\
+			\verb|\033[1;33m| & 黄色 (yellow)         \\
+			\verb|\033[1;34m| & 浅蓝色 (light blue)    \\
+			\verb|\033[1;35m| & 浅紫色 (light magenta) \\
+			\verb|\033[1;36m| & 浅青色 (light cyan)    \\
+			\verb|\033[1;37m| & 白色 (white)          \\
+			\hline
+		\end{tabular}
+		\caption{高亮文本颜色代码}
+	\end{minipage}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{转义代码}   & \textbf{背景颜色} \\
+		\hline
+		\verb|\033[40m| & 黑色            \\
+		\verb|\033[41m| & 红色            \\
+		\verb|\033[42m| & 绿色            \\
+		\verb|\033[43m| & 棕色            \\
+		\verb|\033[44m| & 蓝色            \\
+		\verb|\033[45m| & 紫色            \\
+		\verb|\033[46m| & 青色            \\
+		\verb|\033[47m| & 浅灰色           \\
+		\hline
+	\end{tabular}
+	\caption{背景颜色代码}
+\end{table}

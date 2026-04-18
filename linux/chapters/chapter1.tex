@@ -59,8 +59,32 @@
 	\caption{Linux 常见目录与说明}
 \end{table}
 
+\begin{code}[title=目录与文件操作]
+	\begin{verbatim}
+cd ~user        # 切换到指定用户的家目录
+cd -            # 切换到上一个工作目录
+cp -r src dst   # 递归复制目录
+mv src dst      # 移动或重命名
+rm -r dir       # 递归删除目录
+mkdir -p a/b/c  # 递归创建目录
+ln -s target link # 创建软链接
+file foo        # 识别文件类型
+rename -v 's/(.*) - (.*)\.(.*)/$2 - $1.$3/' *
+rename -v 's/tol24.(.*)/$1/' *.swf          # 批量重命名（支持正则）
+	\end{verbatim}
+\end{code}
+
+\begin{code}[title=文件查找]
+	\begin{verbatim}
+locate filename                          # 从数据库快速查找文件
+stat file                                # 显示文件详细元信息
+find dir -type f -name "*.txt"           # 按类型和名称查找
+find dir -type f -size +10M              # 查找大于10M的文件
+find dir -type f -name "*.log" | xargs rm  # 找到后批量删除
+	\end{verbatim}
+\end{code}
+
 \subsection{文件}
-\subsubsection{文件类型}
 \begin{table}[H]
 	\centering
 	\begin{tabular}{|l|l|}
@@ -81,9 +105,15 @@
 	\caption{文件类型}
 \end{table}
 
-\subsubsection{文件模式}
 文件模式共九个字符，分别定义了文件拥有者、文件所属组和其他用户对于文件的读、写、执行权限。
-使用chmod可以修改文件权限，使用chown可以修改文件拥有者，使用chgrp可以修改文件所属组。
+\begin{code}[title=文件权限管理]
+	\begin{verbatim}
+chmod 755 file       # 修改文件权限
+chown user file      # 修改文件拥有者
+chown user:group file # 同时修改拥有者和所属组
+chgrp group file     # 修改文件所属组
+	\end{verbatim}
+\end{code}
 
 权限可以用数字表示法（如\texttt{755}）来设置，数字表示法中，每个数字是三个权限位的和，分别对应拥有者、所属组和其他用户。
 常用的有：7（rwx）、6（rw-）、5（r-x）、4（r--）、0（---），可以用umask查看文件创建时默认权限要屏蔽的位掩码。
@@ -104,36 +134,136 @@
 \end{table}
 
 除了基本权限外，还有特殊权限：setuid、setgid和粘滞位，分别显示在文件模式的用户执行位、组执行位和其他用户执行位上，
-用数字表示法时，setuid为4，setgid为2，粘滞位为1。
+用数字表示法时，特殊权限作为第四位前缀添加在普通三位权限之前，setuid为4，setgid为2，粘滞位为1，例如\texttt{4755}表示设置了setuid位。
 
-如果为可执行文件设置了setuid位，那么该文件在执行时将以文件拥有者的权限运行。
-如果为可执行文件设置了setgid位，那么该文件在执行时将以文件所属组的权限运行。
-如果为目录设置了setgid位，那么在该目录下创建的文件将继承该目录的所属组，一般共享目录会设置setgid位。
-如果为目录设置了粘滞位，那么只有文件拥有者、目录拥有者或超级用户才能删除或重命名该目录下的文件。
+\begin{itemize}
+	\item \textbf{setuid}（可执行文件）：执行时以文件拥有者的权限运行。
+	\item \textbf{setgid}（可执行文件）：执行时以文件所属组的权限运行。
+	\item \textbf{setgid}（目录）：目录下新建的文件将继承该目录的所属组，一般共享目录会设置此位。
+	\item \textbf{粘滞位}（目录）：只有文件拥有者、目录拥有者或超级用户才能删除或重命名该目录下的文件。
+\end{itemize}
 
-\subsubsection{文件编辑}
+\subsection{文件编辑}
 \begin{table}[H]
 	\centering
 	\begin{tabular}{llllll}
 		cat  & sort & uniq  & cut & paste & join   \\
 		comm & diff & patch & tr  & sed   & aspell \\
-		nl   & fold & fmt   & rev  & groff & seq    \\
+		nl   & fold & fmt   & rev & groff & seq    \\
 	\end{tabular}
 	\caption{文件操作命令}
 \end{table}
 
-常用命令说明如下：
+\begin{code}[title=文件编辑常用命令]
+	\begin{verbatim}
+cut -d: -f1 /etc/passwd      # 以:为分隔符，提取第1列
+paste file1 file2            # 按列合并两个文件
+join file1 file2             # 根据公共字段连接两个文件
+comm file1 file2             # 逐行比较两个已排序文件
+diff file1 file2             # 比较两个文件的差异
+patch file < file.patch      # 根据 diff 补丁更新文件
+tr 'a-z' 'A-Z'               # 将小写字母转换为大写
+rev file                     # 反转每行字符
+expand file                  # 将 tab 转换为空格
+sed 's/old/new/g' file       # 全局替换
+sed -n '1,5p' file           # 只输出1到5行
+sed -n '/pattern/p' file     # 只输出匹配行
+grep -n -E 'regex' file      # 显示行号，使用扩展正则
+grep -i 'pattern' file       # 忽略大小写
+printf "%s\n" str1           # 格式化输出
+aspell check file            # 拼写检查
+seq 1 10                     # 生成 1 到 10 的数字序列
+	\end{verbatim}
+\end{code}
+
+\subsubsection{vim}
+如果你在vi中不清楚自己处于什么模式，可以通过两次esc来返回命令模式。
+\begin{table}[H]
+	\centering
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\begin{tabular}{|l|l|}
+			\hline
+			\textbf{命令}          & \textbf{说明}         \\
+			\hline
+			\verb|0|             & 移动到行首               \\
+			\hline
+			\verb|^|             & 移动到行首第一个非空白字符       \\
+			\hline
+			\verb|g_|            & 移动到行尾最后一个非空白字符      \\
+			\hline
+			\verb|$|             & 移动到行尾               \\
+			\hline
+			\verb|w| / \verb|b|  & 向后/前移动一个单词，大写只以空格为界 \\
+			\hline
+			\verb|e| / \verb|ge| & 移动到单词结尾/向前移动到单词结尾   \\
+			\hline
+			\verb|2G|            & 移动到第二行              \\
+			\hline
+			\verb|G|             & 移动到最后一行             \\
+			\hline
+			\verb|gg|            & 移动到第一行              \\
+			\hline
+		\end{tabular}
+		\caption{vim 常用移动键位}
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.48\linewidth}
+		\centering
+		\begin{tabular}{|l|l|}
+			\hline
+			\textbf{命令} & \textbf{说明} \\
+			\hline
+			\verb|x|    & 删除当前字符      \\
+			\hline
+			\verb|2x|   & 删除当前2个字符    \\
+			\hline
+			\verb|dd|   & 删除当前行       \\
+			\hline
+			\verb|2dd|  & 删除当前两行      \\
+			\hline
+			\verb|dG|   & 从当前行删到最后一行  \\
+			\hline
+			\verb|d20G| & 从当前行删到20行   \\
+			\hline
+			\verb|d$|   & 从当前字符删到行尾   \\
+			\hline
+			\verb|d0|   & 从当前字符删到行首   \\
+			\hline
+		\end{tabular}
+		\caption{删除键位（d剪切，y复制，p粘贴）}
+	\end{minipage}
+\end{table}
+
 \begin{itemize}
-	\item \textbf{cut}：按列提取文件中的指定字段。
-	\item \textbf{paste}：按列合并多个文件内容。
-	\item \textbf{join}：根据某一字段将两个文件进行连接。
-	\item \textbf{comm}：逐行比较两个已排序文件，输出差异和共同部分。
-	\item \textbf{diff}：逐行比较文件内容的不同之处。
-	\item \textbf{patch}：根据 \texttt{diff} 生成的补丁文件来更新原文件。
-	\item \textbf{tr}：搜索替换文本中的字符。
-	\item \textbf{rev}：反转输入的每一行字符。
-	\item \textbf{sed}：流编辑器，用于替换、插入、删除文本。
-	\item \textbf{aspell}：拼写检查工具。
-	\item \textbf{seq}：生成一段数字范围。
+	\item 行内搜索：\verb|fa| 移动到行内下一个 a，\verb|ta| 移动到 a 前一个字符；\verb|;| 下一个，\verb|,| 上一个。
+	\item 全局搜索：/ 进行全局搜索，n 重复上次搜索。
+	\item 行内替换：\verb|:s/Line/line/g|，s是替换命令，g代表找到的结果全部替换。
+	\item 全局替换：命令为\verb|%s/Line/line/g|，\verb|%|代表搜索整个文件，
+	      也可以写成\verb|1,$|，代表从第1行到最后一行。
 \end{itemize}
 
+\begin{code}[title=vim 其他常用命令]
+	\begin{verbatim}
+.          # 重复上次操作
+u          # 撤销，Ctrl+r 重做
+I          # 跳到行首并进入插入模式
+A          # 跳到行尾并进入插入模式
+Ctrl+o     # 插入模式下临时执行一次普通模式命令
+ggVG       # 全选（gg到首行，V进入行选模式，G到末行）
+:r foo.txt # 将 foo.txt 内容插入当前光标下方
+	\end{verbatim}
+\end{code}
+
+\subsection{压缩}
+\begin{code}[title=压缩与归档]
+	\begin{verbatim}
+gzip file           # 压缩为 file.gz（原文件被替换）
+gunzip file.gz      # 解压 .gz
+bzip2 file          # 压缩为 file.bz2（压缩率更高）
+bunzip2 file.bz2    # 解压 .bz2
+zcat file.gz        # 不解压直接查看内容
+zip archive.zip file1 file2  # 打包压缩
+unzip archive.zip            # 解压 .zip
+	\end{verbatim}
+\end{code}

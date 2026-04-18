@@ -1,143 +1,79 @@
 \section{Shell脚本}
-\subsection{颜色}
-Shell中也能显示颜色，分为文本颜色和背景颜色，关闭颜色的代码是\verb|\033[0m|。
-\begin{table}[H]
-	\centering
-	\begin{minipage}{0.45\linewidth}
-		\centering
-		\begin{tabular}{|l|l|}
-			\hline
-			\textbf{转义代码}     & \textbf{文本颜色}    \\
-			\hline
-			\verb|\033[0;30m| & 黑色 (black)       \\
-			\verb|\033[0;31m| & 红色 (red)         \\
-			\verb|\033[0;32m| & 绿色 (green)       \\
-			\verb|\033[0;33m| & 棕色 (brown)       \\
-			\verb|\033[0;34m| & 蓝色 (blue)        \\
-			\verb|\033[0;35m| & 紫色 (magenta)     \\
-			\verb|\033[0;36m| & 青色 (cyan)        \\
-			\verb|\033[0;37m| & 浅灰色 (light grey) \\
-			\hline
-		\end{tabular}
-		\caption{常用文本颜色代码}
-	\end{minipage}
-	\hfill
-	\begin{minipage}{0.45\linewidth}
-		\centering
-		\begin{tabular}{|l|l|}
-			\hline
-			\textbf{转义代码}     & \textbf{文本颜色}       \\
-			\hline
-			\verb|\033[1;30m| & 深灰色 (deep grey)     \\
-			\verb|\033[1;31m| & 浅红色 (light red)     \\
-			\verb|\033[1;32m| & 浅绿色 (light green)   \\
-			\verb|\033[1;33m| & 黄色 (yellow)         \\
-			\verb|\033[1;34m| & 浅蓝色 (light blue)    \\
-			\verb|\033[1;35m| & 浅紫色 (light magenta) \\
-			\verb|\033[1;36m| & 浅青色 (light cyan)    \\
-			\verb|\033[1;37m| & 白色 (white)          \\
-			\hline
-		\end{tabular}
-		\caption{高亮文本颜色代码}
-	\end{minipage}
-\end{table}
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|l|}
-		\hline
-		\textbf{转义代码}   & \textbf{背景颜色} \\
-		\hline
-		\verb|\033[40m| & 黑色            \\
-		\verb|\033[41m| & 红色            \\
-		\verb|\033[42m| & 绿色            \\
-		\verb|\033[43m| & 棕色            \\
-		\verb|\033[44m| & 蓝色            \\
-		\verb|\033[45m| & 紫色            \\
-		\verb|\033[46m| & 青色            \\
-		\verb|\033[47m| & 浅灰色           \\
-		\hline
-	\end{tabular}
-	\caption{背景颜色代码}
-\end{table}
-
 \subsection{脚本格式}
 在 Shell 脚本 的第一行通常会写上\verb|#!/bin/bash|，
 这行语句称为 shebang，告诉操作系统在执行脚本时，应该调用哪一个解释器。
 
 \subsection{变量}
-在 Shell 中，变量可以像 Python 一样直接赋值，不过这种方式定义的变量都是 全局变量；
-如果需要定义局部变量，则必须使用 local 关键字。
+在 Shell 中，变量可以像 Python 一样直接赋值，不过这种方式定义的变量都是全局变量。
 除了直接赋值，还可以通过 read 从标准输入读取用户输入并赋值，一般配合 echo -n 给出提示，
-也可以通过\verb|$0、$1|等读取命令行参数，\verb|$#|表示参数的个数。
+也可以通过\verb|$0、$1|等读取命令行参数，\verb|$#|表示参数的个数，\verb|$@|表示参数列表。
+
+\begin{code}[title=变量]
+	\begin{verbatim}
+local foo="a"       # 局部变量
+echo $REPLY         # read 未指定变量时的默认存储变量
+declare -u upper    # 声明变量，赋值时自动转大写
+declare -l lower    # 声明变量，赋值时自动转小写
+read -p "prompt: " -t 5 var         # 限时5s
+read -p "password: " -s var           # -s隐藏输入
+read -e -i "default" var          # -e命令补全 -i提供默认值
+	\end{verbatim}
+\end{code}
 
 在需要向命令传递输入时，Shell 还提供了 两种重定向方式：here string和here document。
 Here String 使用 \verb|<<<|，可以把一行字符串作为标准输入传递给命令；
 Here Document则适合多行输入，它把分隔符之间的所有文本传递给命令的标准输入。
-\begin{verbatim}
+\begin{code}[title=Here Document]
+	\begin{verbatim}
 # 其中 EOF 是分隔符，可以自定义，只要首尾一致即可。
 cat <<EOF
 这是第一行
 这是第二行
 EOF
-\end{verbatim}
+	\end{verbatim}
+\end{code}
 
-\subsection{vim}
-如果你在vi中不清楚自己处于什么模式，可以通过两次esc来返回命令模式。
-\subsubsection{移动}
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|p{6cm}|}
-		\hline
-		\textbf{命令} & \textbf{说明}   \\
-		\hline
-		\verb|0|    & 移动到行首         \\
-		\hline
-		\verb|^|    & 移动到行首第一个非空白字符 \\
-		\hline
-		\verb|$|    & 移动到行尾         \\
-		\hline
-		\verb|2G|   & 移动到第二行        \\
-		\hline
-		\verb|G|    & 移动到最后一行       \\
-		\hline
-		\verb|gg|   & 移动到第一行        \\
-		\hline
-	\end{tabular}
-	\caption{vim 常用移动键位}
-\end{table}
+\subsection{语句}
+\begin{code}[title=语句]
+	\begin{verbatim}
+[ -e file ]              # 文件存在（-d目录 -f普通文件 -r可读  -s非空）
+[[ str1 >= str2 ]]       # 字符串字母序比较，== 支持 glob 通配符（* ? [...]）
+[[ str =~ ^[0-9]+$ ]]   # =~ 支持正则表达式
+(( INT == 0 ))           # 整数比较
 
-\subsubsection{删除}
-d删除其实是剪切操作，y是复制，用法和d类似，p是粘贴命令。
-\begin{table}[H]
-	\centering
-	\begin{tabular}{|l|p{6cm}|}
-		\hline
-		\textbf{命令} & \textbf{说明} \\
-		\hline
-		\verb|x|    & 删除当前字符      \\
-		\hline
-		\verb|2x|   & 删除当前2个字符    \\
-		\hline
-		\verb|dd|   & 删除当前行       \\
-		\hline
-		\verb|2dd|  & 删除当前两行      \\
-		\hline
-		\verb|dG|   & 从当前行删到最后一行  \\
-		\hline
-		\verb|d20G| & 从当前行删到20行   \\
-		\hline
-		\verb|d$|   & 从当前字符删到行尾   \\
-		\hline
-	\end{tabular}
-	\caption{vim 常用删除键位}
-\end{table}
+for (( i=0; i<6; i=i+1 )); do
+    echo $i
+done
 
-\subsubsection{搜索}
-\begin{itemize}
-	\item 行内搜索：fa就是移动到行内下一个a所在之处，使用;能继续搜索。
-	\item 全局搜索：/进行全局搜索，使用n继续搜索。
-	\item 行内替换：\verb|:s/Line/line/g|，s是替换命令，g代表找到的结果全部替换。
-	\item 全局替换：命令为\verb|%s/Line/line/g|，\verb|%|代表搜索整个文件，
-	也可以写成\verb|1,$|，代表从第1行到最后一行。
-\end{itemize}
+$((2#1010))          # 2 进制
+$((8#77))            # 8 进制（0 前缀亦可）
+$((16#ff))           # 16 进制（0x 前缀亦可）
+$((2**10))           # 求幂，其余运算符与 C 语言相同
+	\end{verbatim}
+\end{code}
+
+\subsection{参数展开}
+\texttt{\#} 表示从头匹配，\texttt{\%} 表示从尾匹配；双符号 \texttt{\#\#} / \texttt{\%\%} 为最长匹配，单符号为最短匹配。
+\begin{code}[title=参数展开]
+	\begin{verbatim}
+"${a}_file"          # 变量与字符串拼接
+${a:-"test"}         # a 未设置时用 test 替代
+${a:+"test"}         # a 已设置时用 test 替代
+${a:="test"}         # a 未设置时用 test 替代并同时赋值给 a
+${a:?"error"}        # a 未设置时返回错误
+
+${#a}                # 字符串长度
+${a:offset}          # 从 offset 开始的子串
+${a:offset:length}   # 从 offset 开始长度为 length 的子串
+${a,,}               # 转小写
+${a^^}               # 转大写
+${a^}                # 首字母大写
+
+${a#pattern}         # 从头删除最短匹配
+${a%%pattern}        # 从尾删除最长匹配
+${a/pattern/string}  # 替换第一个匹配
+${a//pattern/string} # 替换所有匹配
+${a/#pattern/string} # 替换开头匹配
+${a/%pattern/string} # 替换结尾匹配
+	\end{verbatim}
+\end{code}
