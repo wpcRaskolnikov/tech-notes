@@ -47,6 +47,8 @@ Type=simple
 Restart=always
 RestartSec=5s
 
+WorkingDirectory=/home/wpc/data/
+Environment=PORT=1234
 ExecStart=/usr/bin/rathole -s /etc/rathole/rathole.toml
 
 [Install]
