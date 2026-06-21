@@ -1,0 +1,63 @@
+\section{Gated Delta Networks (GDN) 进阶探讨}
+
+\subsection{从线性联想记忆到 Delta 规则}
+传统的线性注意力可以看作是一个简单的累加器：$S_t = S_{t-1} + K_t^\top V_t$。这种方式虽然简单，但存在记忆过载的问题——新的信息只是机械地叠加在旧信息之上。
+
+GDN 引入了 **Delta 规则 (Delta Rule)**，其灵感来源于“快权重程序员” (Fast Weight Programmers) 和线性联想记忆的在线更新。Delta 规则的目标是让模型学会“更新”记忆而不是简单的“堆积”：
+\begin{equation}
+    S_t = S_{t-1} + \alpha_t K_t^\top (V_t - K_t S_{t-1})
+\end{equation}
+其中：
+\begin{itemize}
+    \item $K_t S_{t-1}$：这是根据当前的键 $K_t$ 从旧记忆中提取出的预测值。
+    \item $V_t - K_t S_{t-1}$：预测误差（Delta）。
+    \item $\alpha_t$：学习率（通常由输入动态生成）。
+\end{itemize}
+通过减去预测值，模型能够自动遗忘旧记忆中与当前输入冲突的部分，从而为新信息腾出空间。
+
+\subsection{精细化门控机制 (Fine-grained Gating)}
+GDN 的核心提升在于其复杂的门控架构。典型的 GDN 单元包含以下组件：
+
+\subsubsection{1. 衰减门 (Decay Gate) $f_t$}
+用于控制长期记忆的保留程度。不同于传统 RNN 的标量门控，GDN 往往使用逐元素 (element-wise) 的衰减：
+\begin{equation}
+    f_t = \text{sigmoid}(W_f x_t + b_f) \in (0, 1)^{d \times d}
+\end{equation}
+
+\subsubsection{2. 写入门 (Write Gate) $w_t$}
+控制当前 Delta 更新的强度：
+\begin{equation}
+    w_t = \text{tanh}(W_w x_t + b_w)
+\end{equation}
+
+\subsubsection{3. 完整的状态更新方程}
+结合上述组件，GDN 的隐藏状态 $S_t$（通常是一个 $d \times d$ 的矩阵）更新如下：
+\begin{equation}
+    S_t = f_t \odot S_{t-1} + w_t \odot (K_t^\top (V_t - \beta_t K_t S_{t-1}))
+\end{equation}
+这里 $\beta_t$ 是另一个动态生成的权重，用于调节 Delta 规则的干预程度。
+
+\subsection{硬件感知的块并行化 (Block Parallelization)}
+为了在 GPU 上高效训练，GDN 采用了类似于 FlashAttention 的块处理技术。虽然其逻辑是递归的，但在训练阶段，可以将序列划分为长度为 $B$ 的块。
+\begin{itemize}
+    \item \textbf{块内}：由于 Delta 规则的强耦合性，块内计算往往需要精细设计的 CUDA Kernel。
+    \item \textbf{块间}：通过类似于 RNN 的状态传递，计算每个块的初始状态。
+\end{itemize}
+这种设计使得 GDN 在处理超长序列（如 128k 或更多）时，速度远超传统的 Transformer。
+
+\subsection{GDN vs. Mamba vs. Transformer}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|c|c|}
+        \hline
+        特性 & Transformer & Mamba (SSM) & GDN \\
+        \hline
+        复杂度 & $O(N^2)$ & $O(N)$ & $O(N)$ \\
+        推理内存 & $O(N)$ (KV Cache) & $O(1)$ & $O(1)$ \\
+        记忆机制 & 全局注意力 & 状态空间扫描 & 矩阵式联想记忆 \\
+        更新规则 & 无（静态叠加） & 线性微分方程 & Delta 规则（误差修正） \\
+        \hline
+    \end{tabular}
+    \caption{主流模型对比}
+\end{table}
+GDN 通过将隐藏状态从向量扩展到矩阵，并在矩阵上应用 Delta 规则，实现了比 Mamba 更强的联想记忆能力，同时保持了线性的扩展性。

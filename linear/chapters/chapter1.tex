@@ -1,0 +1,70 @@
+\chapter{注意力机制基础}
+
+\section{引言}
+
+注意力机制（Attention Mechanism）是现代深度学习的核心技术之一，尤其在自然语言处理领域取得了巨大成功。本节回顾标准注意力机制的基本原理，为后续理解线性注意力奠定基础。
+
+\section{标准注意力公式}
+
+注意力机制的核心思想是：给定一组查询（Query）和一组键值对（Key-Value），计算查询与每个键的相似度，并以此作为权重对值进行加权求和。
+
+对于序列长度为 $N$、隐藏维度为 $d$ 的输入，标准注意力的计算过程如下：
+
+\begin{equation}
+    \mathbf{Q} = \mathbf{X}\mathbf{W}_Q, \quad
+    \mathbf{K} = \mathbf{X}\mathbf{W}_K, \quad
+    \mathbf{V} = \mathbf{X}\mathbf{W}_V
+\end{equation}
+
+其中 $\mathbf{X} \in \mathbb{R}^{N \times d}$ 是输入序列，$\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V \in \mathbb{R}^{d \times d}$ 是可学习的投影矩阵。
+
+注意力输出为：
+
+\begin{equation}
+    \text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V}
+\end{equation}
+
+其中 $\text{softmax}$ 操作按行进行，$\sqrt{d}$ 是缩放因子。
+
+\section{多头注意力}
+
+Transformer 模型使用多头注意力（Multi-Head Attention），将查询、键、值分别投影到多个子空间中独立计算注意力，然后将结果拼接：
+
+\begin{equation}
+    \text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)\mathbf{W}_O
+\end{equation}
+
+其中：
+
+\begin{equation}
+    \text{head}_i = \text{Attention}(\mathbf{Q}\mathbf{W}_Q^i, \mathbf{K}\mathbf{W}_K^i, \mathbf{V}\mathbf{W}_V^i)
+\end{equation}
+
+$h$ 是头数，$\mathbf{W}_O$ 是输出投影矩阵。
+
+\section{计算复杂度分析}
+
+标准注意力的计算复杂度主要集中在 $\mathbf{Q}\mathbf{K}^\top$ 这一矩阵乘法上。对于序列长度 $N$ 和隐藏维度 $d$：
+
+\begin{itemize}
+    \item 计算 $\mathbf{Q}\mathbf{K}^\top$：$\mathcal{O}(N^2 d)$
+    \item 计算 $\text{softmax}$：$\mathcal{O}(N^2)$
+    \item 计算与 $\mathbf{V}$ 的乘积：$\mathcal{O}(N^2 d)$
+    \item 总体时间复杂度：$\mathcal{O}(N^2 d)$
+    \item 总体空间复杂度：$\mathcal{O}(N^2)$（需要存储 $N \times N$ 的注意力矩阵）
+\end{itemize}
+
+当序列长度 $N$ 增大时，二次复杂度成为显著瓶颈。例如，当 $N = 10^5$ 时，注意力矩阵需要存储 $10^{10}$ 个元素，这在实际中是不可行的。
+
+\section{长序列挑战}
+
+在实际应用中，许多场景需要处理超长序列：
+
+\begin{itemize}
+    \item 文档级文本理解：数万 token
+    \item 高分辨率图像处理：$1024 \times 1024$ 图像展平后超过 $10^6$ token
+    \item 基因组序列分析：百万级碱基对
+    \item 音频信号处理：长时间音频序列
+\end{itemize}
+
+标准注意力机制在这些场景下计算和内存开销过大，这推动了高效注意力机制的研究，其中线性注意力是最重要的方向之一。

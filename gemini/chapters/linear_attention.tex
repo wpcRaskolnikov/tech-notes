@@ -1,0 +1,36 @@
+\section{线性注意力 (Linear Attention) 深度解析}
+
+\subsection{Softmax 注意力的计算瓶颈}
+传统的 Softmax 注意力定义为：
+\begin{equation}
+    O = \text{softmax}\left(\frac{QK^\top}{\sqrt{d}}\right)V, \quad Q, K, V \in \mathbb{R}^{N \times d}
+\end{equation}
+其中 $A = \text{softmax}(QK^\top / \sqrt{d})$ 是 $N \times N$ 的注意力矩阵。当序列长度 $N$ 达到万级甚至十万级时，存储 $A$ 所需的内存和计算 $A \times V$ 所需的计算量呈平方级增长，成为模型扩展的主要障碍。
+
+\subsection{核方法与结合律优化}
+线性注意力的核心是通过核函数 $\phi(\cdot)$ 将相似度计算从指数形式转化为向量内积形式。通用的线性注意力框架如下：
+\begin{equation}
+    \text{Sim}(Q_i, K_j) = \phi(Q_i) \phi(K_j)^\top
+\end{equation}
+此时，第 $i$ 个位置的输出可以表示为：
+\begin{equation}
+    O_i = \frac{\sum_{j=1}^N (\phi(Q_i) \phi(K_j)^\top) V_j}{\sum_{j=1}^N \phi(Q_i) \phi(K_j)^\top} = \frac{\phi(Q_i) \sum_{j=1}^N (\phi(K_j)^\top V_j)}{\phi(Q_i) \sum_{j=1}^N \phi(K_j)^\top}
+\end{equation}
+通过先计算 $K$ 和 $V$ 的外积和（即隐藏状态 $S = \sum \phi(K_j)^\top V_j$），我们将复杂度降为 $O(N \cdot d^2)$。
+
+\subsubsection{核函数的选择 (Feature Maps)}
+为了保证注意力的非负性和稳定性，常用的核函数包括：
+\begin{itemize}
+    \item \textbf{ELU 特征映射}：$\phi(x) = \text{elu}(x) + 1$。这是 Linear Transformer 论文中提出的经典方法，确保了输出全为正值。
+    \item \textbf{ReLU 特征映射}：直接使用 $\text{relu}(x)$。简单有效，但在某些任务上可能导致稀疏性过强。
+    \item \textbf{泰勒展开近似}：利用 $e^{x^\top y} \approx 1 + x^\top y + \frac{1}{2}(x^\top y)^2$。通过二阶项的近似，可以更逼近 Softmax 的行为，但计算量会有所增加。
+\end{itemize}
+
+\subsection{因果掩码 (Causal Masking) 的线性实现}
+在自回归生成任务中，位置 $i$ 只能看到位置 $j \leq i$ 的信息。对于 Softmax 注意力，这通过三角掩码实现。在线性注意力中，这转化为前缀和 (Prefix Sum) 的计算：
+\begin{align}
+    S_i &= \sum_{j=1}^i \phi(K_j)^\top V_j = S_{i-1} + \phi(K_i)^\top V_i \\
+    z_i &= \sum_{j=1}^i \phi(K_j)^\top = z_{i-1} + \phi(K_i)^\top \\
+    O_i &= \frac{\phi(Q_i) S_i}{\phi(Q_i) z_i}
+\end{align}
+这种递归形式使得线性注意力在逻辑上等价于一个具有无限维状态的 RNN，但在训练时可以通过并行前缀扫描 (Parallel Prefix Scan) 实现与 Transformer 相当的训练速度。

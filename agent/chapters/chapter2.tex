@@ -1,70 +1,65 @@
-\chapter{神经网络}
-\section{神经网络简介}
-在前面的感知机模型中，参数的确定并不是由计算机自动完成的，而是由我们人为地根据真值表等“训练数据”手动计算得出。
-为了让计算机能够自动学习和调整参数，神经网络的概念应运而生。
+\chapter{误差反向传播}
+\section{计算图简介}
+在上一章中，我们提到可以通过梯度法来更新参数、最小化损失函数，并使用数值微分来近似
+计算梯度，这种方法虽然简单直观，但当网络层数增多、参数量变大时，数值微分需要对每个参数
+分别施加微小扰动并重新计算整个网络，计算量会急剧增大，效率极低。为了解决这个问题，我们
+需要一种更高效的求导方法——误差反向传播，而计算图是理解反向传播的关键。
+
+计算图（Computational Graph）是一种将复杂的数学表达式分解为基本运算单元并用图结构表示的方法。
+在计算图中，节点（Node）表示变量或操作（如加法、乘法、激活函数等），边（Edge）表示数据在操作之间的流动或依赖关系。
+
+用计算图解题的情况下，需要先构建计算图，然后在计算图上，从左向右进行计算。
+这里的”从左向右进行计算”被称为正向传播（forward propagation）。
+事实上，也存在反向传播（backward propagation），反向传播将在接下来的导数计算中发挥重要作用。
+
+假设小明在超市买了两个 5 元/个的苹果，消费税为 $10\%$，请计算他需要支付的总金额。
+这个问题可以用图 \ref{fig:computational_graph} 来表示，从左向右逐步计算：先算 $5 \times 2 = 10$（苹果总价），再算 $10 \times 1.1 = 11$
+（含税价格），最终得到小明需要支付 $11$ 元。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.4\textwidth, keepaspectratio]{2-1.png}
-	\caption{神经网络示例}
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{2-1.pdf}
+	\caption{计算图示例}
+	\label{fig:computational_graph}
 \end{figure}
 
-将之前感知机的函数改写成以下更简洁的形式。
-\begin{equation*}
-	y     = h(b + w_1 x_1 + w_2 x_2) \quad
-	h(x)  =
-	\begin{cases}
-		0, & x \leq 0 \\
-		1, & x > 0
-	\end{cases}
-\end{equation*}
+计算图的特征是可以通过传递“局部计算”获得最终结果：每个节点只负责自己简单的运算，
+不需要关心整个计算过程的全貌。这就带来一个优点：无论全局是多么复杂的计算，都可以通过局
+部计算使各个节点致力于简单的计算，从而简化问题。
 
-$ h(x) $ 函数会将输入信号的总和转换为输出信号，被称为激活函数（activation function）。
-我们之前使用的激活函数是“阶跃函数”，一旦输入超过阈值，就切换输出。
-除了这个外，神经网络中常用的激活函数有 sigmoid 函数、ReLU（Rectified Linear Unit）函数。
+\section{反向传播}
+再来思考一下之前的问题，我们计算了购买 2 个苹果时加上消费税最终需要支付的金额。然后
+现在我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求”支付金额关于苹果的
+价格的导数”。具体来说，设苹果的价格为 $x$，支付金额为 $L$，则相当于求 $\frac{dL}{dx}$。
+当苹果的价格稍微上涨时，支付金额会增加多少。
 
-\begin{equation*}
-	\sigma(x)       = \frac{1}{1 + e^{-x}} \quad
-	\text{ReLU}(x)  =
-	\begin{cases}
-		0, & x \leq 0 \\
-		x, & x > 0
-	\end{cases}
-\end{equation*}
+反向传播的原理是，从输出端开始，沿着计算图从右向左，将每个节点的输入值乘以对应的局
+部导数，逐步传递下去。在这个例子中，反向传播从右向左传递导数的值（$1 \to 1.1 \to 2.2$）。从这
+个结果中可知，”支付金额关于苹果的价格的导数”的值是 $2.2$。这意味着，如果苹果的价格上涨 $1$
+元，最终的支付金额会增加 $2.2$ 元。可以看出，计算图的优点是，可以通过反向传播高效地计算各
+个变量的导数值。
 
-对于输出层，我们有时不是直接把输出层的值当作最终结果，比如如果需要做个多分类问题，
-可能需要用 softmax 函数对输出层处理。
-\begin{equation*}
-	\text{Softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}
-\end{equation*}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{2-2.pdf}
+	\caption{反向传播示例}
+\end{figure}
 
-\section{损失函数}
-神经网络“从数据中学习”，由数据自动决定权重参数的值。
-为了达成这个目的，我们先要决定损失函数（loss function），
-之后，神经网络就以这个指标为基准，寻找最优权重参数。
-常用的损失函数有均方误差（mean squared error）和交叉熵误差（cross entropy error）。
-
-\begin{equation*}
-	\text{MSE}  = \frac{1}{2} \sum_{i=1}^n (y_i - \hat{y}_i)^2 \quad
-	\text{CE}   = - \sum_{i=1}^K \hat{y}_i \log(y_i)
-\end{equation*}
-
-这里，$y_i$ 是表示神经网络的输出，$\hat{y}_i$ 表示监督数据，$i$ 表示数据的维数。
-交叉熵误差主要用于多分类问题，实际上他只计算对应正确解标签的输出，假设正确解标签的索引是“1”，
-与之对应的神经网络的输出是0.7，则交叉熵误差是−log 0.7。
-
-使用数据进行学习，就是针对训练数据计算损失函数的值，找出使该值尽可能小的参数。
-如果遇到大数据，数据量会有几百万、几千万之多，这种情况下以全部数据为对象计算损失函数是不现实的。
-因此，我们从全部数据中选出一部分，作为全部数据的“近似”。从训练数据中选出一批数据（mini-batch），
-然后对每个mini-batch进行学习，这种学习方式称为mini-batch学习。
-
-学习的目标是最小化损失函数，梯度法是实现这一目标的常用优化方法：
+计算图的反向传播是基于链式法则成立的。以刚才的苹果问题为例，设苹果的价格为 $x$，则计
+算过程可以分解为两步：
 \begin{align*}
-	x_1^{(t+1)} & = x_1^{(t)} - \eta \frac{\partial f}{\partial x_1}(x_1^{(t)}, x_2^{(t)}) \\
-	x_2^{(t+1)} & = x_2^{(t)} - \eta \frac{\partial f}{\partial x_2}(x_1^{(t)}, x_2^{(t)})
+	z & = 2x \quad \text{（苹果总价）}   \\
+	L & = 1.1z \quad \text{（含税价格）}
 \end{align*}
-$\eta$ 被称为学习率（learning rate）。可以通过数值微分（Numerical Differentiation）来计算导数，
-即向h中赋入一个微小值，直接计算导数式。
+由链式法则：
 \begin{equation*}
-	\frac{d}{dx} f(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}
+	\frac{dL}{dx} = \frac{dL}{dz} \cdot \frac{dz}{dx} = 1.1 \times 2 = 2.2
 \end{equation*}
+可以看出，反向传播中每一步传递的恰好就是每个节点的局部导数（$\frac{dL}{dz} = 1.1$，$\frac{dz}{dx} = 2$），将它们沿
+计算路径依次相乘，就得到了最终的导数值。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{2-3.pdf}
+	\caption{反向传播示例}
+\end{figure}

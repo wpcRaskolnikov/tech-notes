@@ -1,16 +1,21 @@
-\documentclass[UTF8]{ctexbook}
+\documentclass[UTF8]{ctexrep}
 \usepackage[top=1.2in,bottom=1.2in,left=1.25in,right=1in]{geometry}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \graphicspath{{figures/}}
-\numberwithin{figure}{chapter}
-\numberwithin{table}{chapter}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{pifont}
 
-\title{深度学习入门}
+
+\title{线性注意力机制：原理与实践}
 \author{WPC}
 \date{\today}
 
@@ -18,8 +23,6 @@
 
 \maketitle
 \tableofcontents
-
-\part{深度学习}
 
 \include{chapters/chapter1}
 \include{chapters/chapter2}
@@ -29,14 +32,6 @@
 \include{chapters/chapter6}
 \include{chapters/chapter7}
 \include{chapters/chapter8}
-\include{chapters/chapter9}
-
-\part{大模型}
-
-\include{chapters/preface_agent}
-\include{chapters/chapter10}
-\include{chapters/chapter11}
-\include{chapters/chapter12}
 
 
 \end{document}

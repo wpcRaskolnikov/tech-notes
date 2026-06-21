@@ -1,17 +1,21 @@
-\chapter{感知机}
+\chapter{感知机与神经网络}
 \section{感知机简介}
 感知机（Perceptron）由美国学者 Frank Rosenblatt 于 1957 年提出，作为神经网络最早期的算法之一，
 感知机奠定了深度学习发展的基础，至今仍具有重要的学习和研究价值。
 
+在感知机之前，逻辑运算和模式识别主要依赖人工设计的规则，而感知机提供了一种自动学习的方法：
+通过调整权重参数，使机器能够从训练数据中提取规律，从而对新的输入做出正确的判断。
+这种“从数据中学习”的思想，正是现代机器学习的核心。
+
 图 \ref{fig:perceptron} 是一个接收两个输入信号的感知机的例子。
 感知机接收多个输入信号，并输出一个信号，在感知机模型中，输入与输出的信号通常是二值信号（0/1）。
-$x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重。图中的 $\bigcirc$ 代表“神经元”。
+$x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重。图中的 $\bigcirc$ 代表“神经元”，
 输入信号被送往神经元时，会被分别乘以固定的权重，神经元会计算传送过来的信号的总和，
 当这个总和超过了某个阈值 $\theta$，神经元输出 1，这也被称为“神经元被激活”。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.3\textwidth, keepaspectratio]{1-1.png}
+	\includegraphics[width=0.3\textwidth, keepaspectratio]{1-1.pdf}
 	\caption{感知机示例}
 	\label{fig:perceptron}
 \end{figure}
@@ -25,7 +29,9 @@ $x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重
 	\end{cases}
 \end{equation*}
 
-\section{实现与门}
+\section{感知机能力与局限}
+从上面的公式可以看出，感知机的本质是通过权重和阈值对输入信号进行分类。
+那么，感知机能否用来实现基本的逻辑运算呢？答案是肯定的。
 下面考虑用感知机来实现与门，表~\ref{tab:and-truth-table} 是与门的真值表。
 
 \begin{table}[H]
@@ -44,12 +50,13 @@ $x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重
 	\label{tab:and-truth-table}
 \end{table}
 
-我们需要做的就是确定能满足真值表的 $w_1$、$w_2$、$\theta$ 的值。
+我们需要做的就是确定能满足真值表的参数的值，也就是找到 $w_1$、$w_2$、$\theta$，
+使得仅当 $x_1$ 和 $x_2$ 同时为1时，信号的加权总和才会超过给定的阈值 $\theta$。
 实际上，参数的选择方法有无数多种。比如，当 $(w_1, w_2, \theta) = (0.5, 0.5, 0.7)$ 时，
-可以满足条件。此外，当 $(w_1, w_2, \theta) = (0.5, 0.5, 0.8)$ 或者 $(1.0, 1.0, 1.0)$ 时，
-同样也满足与门的条件。设定这样的参数后，仅当 $x_1$ 和 $x_2$ 同时为1时，信号的加权总和才会超过给定的阈值 $\theta$。
+可以满足条件；此外，当 $(w_1, w_2, \theta) = (0.5, 0.5, 0.8)$ 或者 $(1.0, 1.0, 1.0)$ 时，
+同样也满足与门的条件。
 
-为了数学表达的简洁性，我们先把上面感知机实现的数学式子改写一下，用偏置 $b$ 代替阈值 $\theta$，注意 $b = -\theta$。
+为了方便后续讨论，我们把上面感知机实现的数学式子改写一下，用偏置 $b$ 代替阈值 $\theta$ ($b = -\theta$)。
 \begin{equation*}
 	y =
 	\begin{cases}
@@ -58,7 +65,6 @@ $x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重
 	\end{cases}
 \end{equation*}
 
-\section{局限性}
 前面我们用感知机实现了与门，现在，我们来探讨一个更具挑战性的例子——异或门。
 表~\ref{xor-truth-table} 是异或门的真值表，应该设定什么样的参数能满足这个真值表呢？
 
@@ -77,30 +83,117 @@ $x_1$、$x_2$ 是输入信号，y是输出信号，$w_1$、$w_2$ 是对应权重
 	\label{xor-truth-table}
 \end{table}
 
-实际上，用前面介绍的感知机是无法实现这个异或门的。
-思考感知机如何实现与门的，其实是感知机生成一条直线来划分空间，
-以我们之前实现的与门为例，生成的直线为 $-0.8 + 0.5x_1 + 0.5x_2 = 0$。
+实际上，用前面介绍的感知机是无法实现这个异或门的。这是因为感知机的本质是生成一条直线来划分空间，以我们之前实现的与门为例，生成的直线为 $-0.8 + 0.5x_1 + 0.5x_2 = 0$。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-2.png}
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-2.pdf}
 	\caption{与门可视化}
 	\label{fig:and_gate}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-3.png}
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{1-3.pdf}
 	\caption{异或门可视化}
 	\label{fig:xor_gate}
 \end{figure}
 
 想要用一条直线将图 \ref{fig:xor_gate} 中的数据分开，是做不到的。
-感知机只能表示线性可分的空间，不过，就如同我们能通过与门、与非门、或门构建异或门，
-我们也能够通过“多层叠加”感知机来处理非线性可分的问题。
+感知机只能表示线性可分的空间，因此感知机无法实现异或门。
+
+那么，有没有办法绕过这个限制呢？前面我们已经用感知机实现了与门，
+类似地，与非门和或门也可以用感知机来实现。
+在数字逻辑中，通过与门、与非门、或门的组合，可以构建出异或门。
+既然这些基本门电路都能用感知机表示，那么我们自然可以通过“多层叠加”感知机来处理非线性可分的问题。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.4\textwidth, keepaspectratio]{1-4.png}
+	\includegraphics[width=0.6\textwidth, keepaspectratio]{1-4.pdf}
 	\caption{通过组合实现异或门}
 \end{figure}
+
+\section{神经网络简介}
+在前面的感知机模型中，参数的确定并不是由计算机自动完成的，而是由我们人为地根据真值表等“训练数据”手动计算得出。
+为了让计算机能够自动学习和调整参数，神经网络的概念应运而生。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{1-5.pdf}
+	\caption{神经网络示例}
+\end{figure}
+
+将之前感知机的函数改写成以下更简洁的形式。
+\begin{equation*}
+	y     = h(b + w_1 x_1 + w_2 x_2) \quad
+	h(x)  =
+	\begin{cases}
+		0, & x \leq 0 \\
+		1, & x > 0
+	\end{cases}
+\end{equation*}
+
+$ h(x) $ 函数会将输入信号的总和转换为输出信号，被称为激活函数（activation function）。
+我们之前使用的激活函数是“阶跃函数”，一旦输入超过阈值，就切换输出。
+除了这个外，神经网络中常用的激活函数有 sigmoid 函数、ReLU（Rectified Linear Unit）函数。
+
+\begin{equation*}
+	\sigma(x)       = \frac{1}{1 + e^{-x}} \quad
+	\text{ReLU}(x)  =
+	\begin{cases}
+		0, & x \leq 0 \\
+		x, & x > 0
+	\end{cases}
+\end{equation*}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{1-6.pdf}
+	\caption{Sigmoid 函数与 ReLU 函数}
+\end{figure}
+
+对于输出层，根据任务的不同，我们可能需要选择不同的激活函数。
+例如，在二分类问题中，输出层可以直接使用 sigmoid 函数，将输出转换为 0 到 1 之间的概率值。
+而在多分类问题中，我们通常需要输出每个类别的概率分布，这时就需要使用 softmax 函数对输出层进行处理。
+\begin{equation*}
+	\text{Softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^K e^{z_j}}
+\end{equation*}
+
+\section{从数据中学习}
+神经网络“从数据中学习”，由数据自动决定权重参数的值。
+为了达成这个目的，我们先要决定损失函数（loss function），
+之后，神经网络就以这个指标为基准，寻找最优权重参数。
+常用的损失函数有均方误差（mean squared error）和交叉熵误差（cross entropy error）。
+
+\begin{equation*}
+	\text{MSE}  = \frac{1}{2} \sum_{i=1}^n (y_i - \hat{y}_i)^2 \quad
+	\text{CE}   = - \sum_{i=1}^K \hat{y}_i \log(y_i)
+\end{equation*}
+
+这里，$y_i$ 是表示神经网络的输出，$\hat{y}_i$ 表示监督数据，$i$ 表示数据的维数。
+交叉熵误差主要用于多分类问题，实际上他只计算对应正确解标签的输出，假设正确解标签的索引是“1”，
+与之对应的神经网络的输出是0.7，则交叉熵误差是−log 0.7。
+
+使用数据进行学习，就是针对训练数据计算损失函数的值，找出使该值尽可能小的参数。
+当训练数据量很大（例如几百万、几千万条）时，每次都使用全部数据来计算损失函数是不现实的。
+因此，我们从训练数据中随机抽取一小批数据（称为 mini-batch），
+仅用这批数据来近似计算损失函数并更新参数。
+例如，从60000条训练数据中随机抽取100条，用这100条数据计算损失并更新参数，
+然后重新抽取下一批100条，重复这一过程。这种学习方式称为 mini-batch 学习。
+
+学习的目标是最小化损失函数，梯度法是实现这一目标的常用方法。
+它的核心思想是，计算损失函数关于每个参数的梯度，然后沿着梯度的反方向更新参数。
+因为梯度指向函数值增长最快的方向，反方向就是下降最快的方向，反复沿着这个方向更新，就能逐步逼近最小值。
+具体来说，对于参数 $x_1, x_2$，梯度法的更新规则如下：
+\begin{align*}
+	x_1^{(t+1)} & = x_1^{(t)} - \eta \frac{\partial f}{\partial x_1}(x_1^{(t)}, x_2^{(t)}) \\
+	x_2^{(t+1)} & = x_2^{(t)} - \eta \frac{\partial f}{\partial x_2}(x_1^{(t)}, x_2^{(t)})
+\end{align*}
+$\eta$ 被称为学习率（learning rate）。
+
+为了计算梯度，我们可以使用数值微分（Numerical Differentiation）来近似求导：
+给输入一个微小的扰动 $h$（例如 $h = 10^{-4}$），然后通过计算函数值的变化率来近似导数：
+\begin{equation*}
+	\frac{d}{dx} f(x) \approx \frac{f(x + h) - f(x)}{h} \quad (h \to 0)
+\end{equation*}
+这种方法不需要推导解析表达式，可以直接通过代码计算任意函数的导数。

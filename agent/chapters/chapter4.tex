@@ -1,163 +1,76 @@
-\chapter{CNN}
-\section{CNN简介}
-本章的主题是卷积神经网络（Convolutional Neural Network，CNN），
-之前介绍的神经网络中，相邻层的所有神经元之间都有连接，这称为全连接网络（fully-connected Network）。
+\chapter{自然语言处理}
+\section{单词表示}
+自然语言处理（Natural Language Processing，NLP），它的目标就是让计算机理解人说的话，进而帮助人们更好地完成某些事情。
+语言是由文字构成的，而语言的含义是由单词构成的，即单词是含义的最小单位。所以，为了让计算机理解自然语言，第一步就是让它理解单词含义。
 
-\begin{figure}[H]
+\section{基于同义词词典的方法}
+要表示单词含义，首先可以考虑通过人工方式来定义单词含义，一种方式就是像词典一样，一个词一个词地说明单词含义。
+NLP中广泛运用的一种词典是同义词词典（thesaurus），在词典中，含义类似的单词被归类到同一个组中。
+比如， car 的同义词有automobile、motorcar等。另外，在同义词词典中，有时还会定义更多的关系，比如上位下位关系、整体部分关系等。
+在NLP领域，最著名的同义词词典是普林斯顿大学于 1985 年开始开发的同义词词典 WordNet。
+
+同义词词典有许多缺陷，第一点是它难以实时更新，随着时间的推移，会有新词不断出现，也会有旧词被赋予新的含义，
+同义词词典很难反映出这种变化。第二点是生成同义词词典的人力成本高，以英文为例，
+据说现有的英文单词总数超过 1000 万个，光靠人力创造完全的同义词词典不太现实。
+第三点是它无法表示单词的微妙差异，含义相近的单词之间可能也会有细微的区别，这些区别同义词词典不能很好体现。
+
+\section{基于统计的方法}
+基于统计的方法的目标是将单词表示成向量形式，在NLP中也称为分布式表示，这个想法基于分布式假设（distributional hypothesis）：
+“某个单词的含义由它周围的单词形成”，也就是说单词含义可以它所在的上下文表示。
+该方法需要使用语料库（corpus），即大量的文本数据，如Wikipedia等。
+考虑句子："I say yes and you say no."，首先对文本进行分词，记录下每个单词的上下文（假设窗口大小为1），
+I的上下文只有say，其表示为：
+\begin{table}[H]
 	\centering
-	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-1.png}
-	\caption{全连接网络示例}
-\end{figure}
+	\begin{tabular}{c|cccccccccc}
+		  & I & say & yes & and & you & no & . \\
+		\hline
+		I & 0 & 1   & 0   & 0   & 0   & 0  & 0 \\
+	\end{tabular}
+\end{table}
+即you向量表示为$(0, 1, 0, 0, 0, 0, 0)$,继续处理剩余单词。最后生成一个生成共现矩阵（co-occurence matrix），
+矩阵每行对应一个单词向量：
 
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-2.png}
-	\caption{卷积神经网络示例}
-\end{figure}
+$$
+	\begin{bmatrix}
+		0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+		1 & 0 & 1 & 0 & 1 & 1 & 0 \\
+		0 & 1 & 0 & 1 & 0 & 0 & 0 \\
+		0 & 0 & 1 & 0 & 1 & 0 & 0 \\
+		0 & 1 & 0 & 1 & 0 & 0 & 0 \\
+		0 & 1 & 0 & 0 & 0 & 0 & 1 \\
+		0 & 0 & 0 & 0 & 0 & 1 & 0
+	\end{bmatrix}
+$$
 
-相较全连接网络，CNN中新出现了卷积层（Convolution层）和池化层（Pooling层），
-CNN 的层的连接顺序是“Conv - ReLU - Pooling”（Pooling层有时会被省略）。
-还需要注意的是，在 CNN 中，靠近输出的层中使用了之前的“Affine - ReLU”组合。
-此外，最后的输出层中使用了之前的“Affine - Softmax”组合，这些都是 CNN 中比较常见的结构。
+在上面的矩阵中，元素表示两个单词同时出现的次数，这种表示有时可能出现问题。
+考虑语料库频繁出现“...the car...”的情况，如果只看单词的出现次数，
+有可能出现 the 和 car 的相关性比 car 与 drive 相关性更强的情况。
+为了解决这一问题，可以使用点互信息（Pointwise Mutual Information，PMI）指标，
+对于随机变量 x 和 y，它们的 PMI 定义如下：
+$$
+	\operatorname{PMI}(x, y) = \log \frac{P(x, y)}{P(x) P(y)}
+$$
+为了避免$\log 0$,实践上会使用正的点互信息（Positive PMI，PPMI）:
+$$
+	\operatorname{PPMI}(x, y) = max (0, \operatorname{PMI}(x, y))
+$$
 
-\section{卷积层}
-全连接层（Affine层）存在什么问题呢？那就是数据的形状被“忽视”了。比如，输入数据是图像时，
-图像通常是高、长、rgb通道方向上的3维形状。但是，向全连接层输入时，需要将3维数据拉平为1维数据。
-图像是3维形状，这个形状中含有重要的空间信息。比如，空间上邻近的像素为相似的值，形状中可能隐藏有值得提取的特征。
+\section{基于推理的方法}
+基于统计的方法在处理大规模语料库会出现问题，由于单词数量非常大，生成的矩阵也会非常庞大，处理起来不太方便。
+本节介绍基于推理的方法，他的原理相当于训练一个嵌入模型，让它做完形填空，通过反复的预测训练，学习到单词的嵌入表示。
 
-卷积层可以保持形状不变。当输入数据是图像时，卷积层会以3维数据的形式接收输入数据，并同样以3维数据的形式输出至下一层。
-利用卷积层，有可能正确理解输入数据的形状的信息，卷积层的输入输出数据称为特征图（feature map）。
-其中，输入数据称为输入特征图（input feature map），输出数据称为输出特征图（output feature map）。
+在使用神经网络处理单词之前，首先需要将单词转换为向量表示。其中最简单的一种方式是使用 one-hot 编码。
+这种表示方法中，向量的长度等于词汇表的大小，且仅将对应单词 ID 的位置设为 1，其余位置均为 0。
 
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{4-3.png}
-	\caption{卷积运算示例}
-\end{figure}
+Word2Vec 是Google于2013开源的词向量计算工具，其中使用的模型之一为 CBOW（continuous bag-of-words）模型。
+CBOW 模型的输入是上下文，这个上下文用单词列表表示，每个单词用one-hot表示成向量，因此如果上下文考虑 N 个单词，
+则输入层会有 N 个。CBOW中，中间层的神经元是各个输入层经全连接层变换后得到的值的平均，输出层神经元数目等于词表大小，
+这些神经元是各个单词的得分，它的值越大，说明对应单词的出现概率就越高。
 
-卷积层进行的处理就是卷积运算，相当于图像处理中的“滤波器运算”，滤波器也被称为卷积核，
-卷积运算以一定间隔滑动滤波器的窗口并应用，这个计算也被称为乘积累加运算。
+Word2Vec 中还有一个是被称为 skip-gram 的模型，skip-gram 反转了 CBOW 模型的目标，CBOW模型从上下文预测单词，
+而skip-gram模型则从单词预测上下文。在Word2Vec中，模型的输入侧的中间层权重就是单词的分布式表示。
 
-\begin{figure}[H]
-    \centering
-    % 第一行
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-4a.png}
-        \caption{step 1}
-        \label{fig:a}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-4b.png}
-        \caption{step 2}
-        \label{fig:b}
-    \end{subfigure}
-
-    \vspace{0.5cm} % 行间距
-
-    % 第二行
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-4c.png}
-        \caption{step 3}
-        \label{fig:c}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-4d.png}
-        \caption{step 4}
-        \label{fig:d}
-    \end{subfigure}
-
-    \caption{卷积运算流程说明}
-    \label{fig:grid}
-\end{figure}
-
-CNN中也存在偏置，偏置通常只有1个，这个值会被加到应用了滤波器的所有元素上。
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-5.png}
-	\caption{偏置示例}
-\end{figure}
-
-在进行卷积层的处理之前，有时要向输入数据的周围填入固定的数据（比如0），这称为填充（padding），主要是为了调整输出的大小。
-如下图所示，通过应用了幅度为1的填充，大小为(4, 4)的输入数据变成了(6, 6)的形状，
-然后，应用大小为(3, 3)的滤波器，生成了大小为(4, 4)的输出数据。
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.75\textwidth, keepaspectratio]{4-6.png}
-	\caption{填充示例}
-\end{figure}
-
-应用滤波器的位置间隔称为步幅（stride）。下图为一个步幅为2卷积运算示例。
-
-\begin{figure}[H]
-    \centering
-    % 第一行
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-7a.png}
-        \caption{step 1}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.45\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-7b.png}
-        \caption{step 2}
-    \end{subfigure}
-
-    \caption{步幅示例}
-\end{figure}
-
-图像是3维数据，除了高、长方向之外，还需要处理通道方向，在3维数据的卷积运算中，输入数据和滤波器的通道数要设为相同的值。
-最后数据输出是1张特征图，如果要数据输出在通道方向上也拥有维度，那么就需要用到多个滤波器，生成多个特征图。
-
-\section{池化层}
-池化是缩小高、长方向上的空间的运算，下图是按步幅2进行2 × 2的Max池化时的处理顺序。
-一般来说，池化的窗口大小会和步幅设定成相同的值。
-除了Max池化之外，还有Average池化、随机池化等，在图像识别领域，主要使用Max池化。
-
-\begin{figure}[H]
-    \centering
-    % 第一行
-    \begin{subfigure}[b]{0.4\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-8a.png}
-        \caption{step 1}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.4\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-8b.png}
-        \caption{step 2}
-    \end{subfigure}
-
-    \vspace{0.5cm} % 行间距
-
-    % 第二行
-    \begin{subfigure}[b]{0.4\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-8c.png}
-        \caption{step 3}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.4\textwidth}
-        \centering
-        \includegraphics[width=0.9\textwidth]{4-8d.png}
-        \caption{step 4}
-    \end{subfigure}
-
-    \caption{池化层流程说明}
-\end{figure}
-
-池化层的特征
-\begin{itemize}
-	\item 没有要学习的参数:池化层和卷积层不同，没有要学习的参数。
-	\item 通道数不发生变化:经过池化运算，输入数据和输出数据的通道数不会发生变化。
-	\item 对微小的位置变化具有鲁棒性:输入数据发生微小偏差时，池化仍会返回相同的结果。
-\end{itemize}
+考虑one-hot表示，由于其中只有一个为1的元素，它与中间层权重矩阵的乘积其实就是取矩阵的某一行，也即获得单词的分布式表示，
+这个分布式表示也被称为词嵌入（word embedding），所以输入侧中间层有时也被称为 Embedding 层。由于这个操作比较简单，
+实践上一般用查表的方式代替代替矩阵乘积。

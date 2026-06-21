@@ -1,0 +1,123 @@
+\chapter{线性注意力的核心原理}
+
+\section{核函数视角的注意力}
+
+线性注意力的核心在于将标准注意力中的 softmax 核函数替换为可分解的核函数。从核方法的视角来看，标准注意力使用的核函数为：
+
+\begin{equation}
+    \kappa_{\text{softmax}}(\mathbf{q}, \mathbf{k}) = \frac{\exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d})}{\sum_{k'} \exp(\mathbf{q}^\top \mathbf{k}' / \sqrt{d})}
+\end{equation}
+
+这是一个归一化的指数核函数，分母依赖于所有键的集合，导致无法分解。
+
+线性注意力使用一个可分解的核函数来替代：
+
+\begin{equation}
+    \kappa(\mathbf{q}_i, \mathbf{k}_j) = \phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j)
+\end{equation}
+
+其中 $\phi: \mathbb{R}^d \rightarrow \mathbb{R}^m$ 是一个特征映射函数。
+
+\section{线性注意力公式}
+
+使用可分解核函数后，注意力输出可以写为：
+
+\begin{equation}
+    \mathbf{o}_i = \frac{\sum_{j=1}^N \kappa(\mathbf{q}_i, \mathbf{k}_j) \mathbf{v}_j}{\sum_{j=1}^N \kappa(\mathbf{q}_i, \mathbf{k}_j)} = \frac{\sum_{j=1}^N \phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j) \mathbf{v}_j}{\sum_{j=1}^N \phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j)}
+\end{equation}
+
+利用矩阵运算的结合律，分子和分母可以分别改写为：
+
+\begin{align}
+    \text{分子} &= \phi(\mathbf{q}_i)^\top \sum_{j=1}^N \phi(\mathbf{k}_j) \mathbf{v}_j^\top = \phi(\mathbf{q}_i)^\top \mathbf{S} \\
+    \text{分母} &= \phi(\mathbf{q}_i)^\top \sum_{j=1}^N \phi(\mathbf{k}_j) = \phi(\mathbf{q}_i)^\top \mathbf{z}
+\end{align}
+
+其中：
+
+\begin{equation}
+    \mathbf{S} = \sum_{j=1}^N \phi(\mathbf{k}_j) \mathbf{v}_j^\top \in \mathbb{R}^{m \times d}, \quad \mathbf{z} = \sum_{j=1}^N \phi(\mathbf{k}_j) \in \mathbb{R}^m
+\end{equation}
+
+\section{计算顺序的变换}
+
+标准注意力的计算流程：
+
+\begin{equation}
+    \mathbf{O} = \underbrace{\text{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d})}_{\mathbf{A} \in \mathbb{R}^{N \times N}} \mathbf{V}
+\end{equation}
+
+需要先计算 $N \times N$ 的注意力矩阵，复杂度 $\mathcal{O}(N^2 d)$。
+
+线性注意力的计算流程：
+
+\begin{enumerate}
+    \item 计算 $\mathbf{S} = \sum_{j=1}^N \phi(\mathbf{k}_j) \mathbf{v}_j^\top$，复杂度 $\mathcal{O}(Nd^2)$
+    \item 计算 $\mathbf{z} = \sum_{j=1}^N \phi(\mathbf{k}_j)$，复杂度 $\mathcal{O}(Nd)$
+    \item 对每个 $i$，计算 $\mathbf{o}_i = \frac{\phi(\mathbf{q}_i)^\top \mathbf{S}}{\phi(\mathbf{q}_i)^\top \mathbf{z}}$，总复杂度 $\mathcal{O}(Nd^2)$
+\end{enumerate}
+
+总体时间复杂度为 $\mathcal{O}(Nd^2)$，空间复杂度为 $\mathcal{O}(Nd)$（不需要存储 $N \times N$ 矩阵）。
+
+\section{特征映射的设计}
+
+特征映射 $\phi$ 的设计是线性注意力的关键。它需要满足以下条件：
+
+\begin{enumerate}
+    \item 非负性：$\phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j) \geq 0$，以确保注意力权重非负
+    \item 近似指数核：$\phi(\mathbf{q}_i)^\top \phi(\mathbf{k}_j) \approx \exp(\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d})$
+    \item 计算高效：$\phi$ 的计算和存储开销应当尽可能小
+\end{enumerate}
+
+不同的线性注意力方法在特征映射 $\phi$ 的设计上做出了不同选择。
+
+\subsection{elu+1 映射}
+
+Katharopoulos 等人在 Linear Transformer 中提出了简单的特征映射：
+
+\begin{equation}
+    \phi(\mathbf{x}) = \text{elu}(\mathbf{x}) + 1
+\end{equation}
+
+其中 elu 函数定义为：
+
+\begin{equation}
+    \text{elu}(x) = \begin{cases}
+        x, & x > 0 \\
+        \alpha(\exp(x) - 1), & x \leq 0
+    \end{cases}
+\end{equation}
+
+这个映射保证输出始终为正，且计算成本低廉。
+
+\subsection{随机傅里叶特征}
+
+基于 Bochner 定理，对于平移不变的核函数（如 RBF 核），可以通过随机傅里叶特征进行近似：
+
+\begin{equation}
+    \phi(\mathbf{x}) = \frac{1}{\sqrt{m}} \begin{bmatrix}
+        \cos(\boldsymbol{\omega}_1^\top \mathbf{x} + b_1) \\
+        \vdots \\
+        \cos(\boldsymbol{\omega}_m^\top \mathbf{x} + b_m)
+    \end{bmatrix}
+\end{equation}
+
+其中 $\boldsymbol{\omega}_i$ 从高斯分布中随机采样，$b_i$ 从均匀分布 $[0, 2\pi]$ 中采样。
+
+\section{因果注意力与掩码}
+
+在自回归模型（如语言模型）中，需要确保每个位置只能关注之前的位置。在线性注意力的框架下，这可以通过累积和（cumulative sum）自然地实现。
+
+对于因果（causal）线性注意力，每个位置 $i$ 的聚合量为：
+
+\begin{equation}
+    \mathbf{S}_i = \sum_{j=1}^i \phi(\mathbf{k}_j) \mathbf{v}_j^\top, \quad \mathbf{z}_i = \sum_{j=1}^i \phi(\mathbf{k}_j)
+\end{equation}
+
+这可以通过递推高效计算：
+
+\begin{equation}
+    \mathbf{S}_i = \mathbf{S}_{i-1} + \phi(\mathbf{k}_i) \mathbf{v}_i^\top, \quad \mathbf{z}_i = \mathbf{z}_{i-1} + \phi(\mathbf{k}_i)
+\end{equation}
+
+这种递推形式恰好对应于序列从左到右的处理方式，无需显式构造掩码矩阵。

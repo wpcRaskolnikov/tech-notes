@@ -1,57 +1,163 @@
-\chapter{计算图}
-\section{计算图简介}
-计算图（Computational Graph）是一种将复杂的数学表达式分解为基本运算单元并用图结构表示的方法。
-在计算图中，节点（Node） 表示变量或操作（如加法、乘法、激活函数等），边（Edge） 表示数据在操作之间的流动或依赖关系。
-
-假设小明在超市买了两个 5 元/个的苹果，消费税为 $10\%$，请计算他需要支付的总金额。
+\chapter{CNN}
+\section{CNN简介}
+本章的主题是卷积神经网络（Convolutional Neural Network，CNN），
+之前介绍的神经网络中，相邻层的所有神经元之间都有连接，这称为全连接网络（fully-connected Network）。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-1.png}
-	\caption{计算图示例}
+	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-1.png}
+	\caption{全连接网络示例}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-2.png}
-	\caption{计算图示例}
+	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-2.png}
+	\caption{卷积神经网络示例}
 \end{figure}
 
-用计算图解题的情况下，需要先构建计算图，然后在计算图上，从左向右进行计算。
-这里的“从左向右进行计算”被称为正向传播（forward propagation）。
-事实上，也存在反向传播（backward propagation），反向传播将在接下来的导数计算中发挥重要作用。
+相较全连接网络，CNN中新出现了卷积层（Convolution层）和池化层（Pooling层），
+CNN 的层的连接顺序是“Conv - ReLU - Pooling”（Pooling层有时会被省略）。
+还需要注意的是，在 CNN 中，靠近输出的层中使用了之前的“Affine - ReLU”组合。
+此外，最后的输出层中使用了之前的“Affine - Softmax”组合，这些都是 CNN 中比较常见的结构。
 
-计算图的特征是可以通过传递“局部计算”获得最终结果，这就带来一个优点：无论全局是多么复杂的计算，
-都可以通过局部计算使各个节点致力于简单的计算，从而简化问题。实际上，使用计算图最大的原因是，
-可以通过反向传播高效计算导数。
+\section{卷积层}
+全连接层（Affine层）存在什么问题呢？那就是数据的形状被“忽视”了。比如，输入数据是图像时，
+图像通常是高、长、rgb通道方向上的3维形状。但是，向全连接层输入时，需要将3维数据拉平为1维数据。
+图像是3维形状，这个形状中含有重要的空间信息。比如，空间上邻近的像素为相似的值，形状中可能隐藏有值得提取的特征。
 
-\section{反向传播}
-我们再来思考一下之前的问题，我们计算了购买2个苹果时加上消费税最终需要支付的金额。
-这里，假设我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求“支付金额关于苹果的价格的导数”。
-设苹果的价格为 $x$，支付金额为 $L$，则相当于求 $\frac{dL}{dx}$。
-这个导数的值表示当苹果的价格稍微上涨时，支付金额会增加多少。
+卷积层可以保持形状不变。当输入数据是图像时，卷积层会以3维数据的形式接收输入数据，并同样以3维数据的形式输出至下一层。
+利用卷积层，有可能正确理解输入数据的形状的信息，卷积层的输入输出数据称为特征图（feature map）。
+其中，输入数据称为输入特征图（input feature map），输出数据称为输出特征图（output feature map）。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-3.png}
-	\caption{反向传播示例}
+	\includegraphics[width=0.5\textwidth, keepaspectratio]{4-3.png}
+	\caption{卷积运算示例}
 \end{figure}
 
-反向传播传递“局部导数”，将导数的值写在箭头的下方。在这个例子中，
-反向传播从右向左传递导数的值（1 → 1.1 → 2.2）。从这个结果中可知，“支付金额关于苹果的价格的导数”的值是2.2。
-这意味着，如果苹果的价格上涨1元，最终的支付金额会增加2.2元。
-可以看出，计算图的优点是，可以通过反向传播高效地计算各个变量的导数值。
+卷积层进行的处理就是卷积运算，相当于图像处理中的“滤波器运算”，滤波器也被称为卷积核，
+卷积运算以一定间隔滑动滤波器的窗口并应用，这个计算也被称为乘积累加运算。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-4.png}
-	\caption{反向传播示例}
+	% 第一行
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-4a.png}
+		\caption{step 1}
+		\label{fig:a}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-4b.png}
+		\caption{step 2}
+		\label{fig:b}
+	\end{subfigure}
+
+	\vspace{0.5cm} % 行间距
+
+	% 第二行
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-4c.png}
+		\caption{step 3}
+		\label{fig:c}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-4d.png}
+		\caption{step 4}
+		\label{fig:d}
+	\end{subfigure}
+
+	\caption{卷积运算流程说明}
+	\label{fig:grid}
 \end{figure}
+
+CNN中也存在偏置，偏置通常只有1个，这个值会被加到应用了滤波器的所有元素上。
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.5\textwidth, keepaspectratio]{3-5.png}
-	\caption{反向传播示例}
+	\includegraphics[width=0.9\textwidth, keepaspectratio]{4-5.png}
+	\caption{偏置示例}
 \end{figure}
 
-计算图的反向传播是基于链式法则成立的，通过提前计算每个节点相对输入的偏导数，可以快速进行反向传播。
+在进行卷积层的处理之前，有时要向输入数据的周围填入固定的数据（比如0），这称为填充（padding），主要是为了调整输出的大小。
+如下图所示，通过应用了幅度为1的填充，大小为(4, 4)的输入数据变成了(6, 6)的形状，
+然后，应用大小为(3, 3)的滤波器，生成了大小为(4, 4)的输出数据。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.75\textwidth, keepaspectratio]{4-6.png}
+	\caption{填充示例}
+\end{figure}
+
+应用滤波器的位置间隔称为步幅（stride）。下图为一个步幅为2卷积运算示例。
+
+\begin{figure}[H]
+	\centering
+	% 第一行
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-7a.png}
+		\caption{step 1}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-7b.png}
+		\caption{step 2}
+	\end{subfigure}
+
+	\caption{步幅示例}
+\end{figure}
+
+图像是3维数据，除了高、长方向之外，还需要处理通道方向，在3维数据的卷积运算中，输入数据和滤波器的通道数要设为相同的值。
+最后数据输出是1张特征图，如果要数据输出在通道方向上也拥有维度，那么就需要用到多个滤波器，生成多个特征图。
+
+\section{池化层}
+池化是缩小高、长方向上的空间的运算，下图是按步幅2进行2 × 2的Max池化时的处理顺序。
+一般来说，池化的窗口大小会和步幅设定成相同的值。
+除了Max池化之外，还有Average池化、随机池化等，在图像识别领域，主要使用Max池化。
+
+\begin{figure}[H]
+	\centering
+	% 第一行
+	\begin{subfigure}[b]{0.4\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-8a.png}
+		\caption{step 1}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.4\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-8b.png}
+		\caption{step 2}
+	\end{subfigure}
+
+	\vspace{0.5cm} % 行间距
+
+	% 第二行
+	\begin{subfigure}[b]{0.4\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-8c.png}
+		\caption{step 3}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.4\textwidth}
+		\centering
+		\includegraphics[width=0.9\textwidth]{4-8d.png}
+		\caption{step 4}
+	\end{subfigure}
+
+	\caption{池化层流程说明}
+\end{figure}
+
+池化层的特征
+\begin{itemize}
+	\item 没有要学习的参数:池化层和卷积层不同，没有要学习的参数。
+	\item 通道数不发生变化:经过池化运算，输入数据和输出数据的通道数不会发生变化。
+	\item 对微小的位置变化具有鲁棒性:输入数据发生微小偏差时，池化仍会返回相同的结果。
+\end{itemize}
