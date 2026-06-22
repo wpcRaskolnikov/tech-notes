@@ -1,118 +1,125 @@
-\chapter{RNN}
-\section{语言模型}
-再考虑一下 word2vec 的 CBOW 模型，假设单词序列为$w_1, w_2, ··· , w_T$且窗口大小为1，
-它所做的事情就是从上下文$w_{t−1}$ 和 $w_{t+1}$预测目标词$w_t$。
-当给定上下文时目标词是 $w_t$ 的概率为$P(w_t \mid w_{t-1}, w_{t+1})$，CBOW 模型就是对这一后验概率进行建模，
-如果使用交叉熵误差，其损失函数是$L = -\log P(w_t \mid w_{t-2}, w_{t-1})$。在上一章我们使用 CBOW 模型的权重获得单词的表示，
-那它本来的目的“从上下文预测目标词”是否能用来做点事情呢？这就得提到语言模型了。
+\chapter{文本生成}
+\section{Seq2Seq模型}
+语言模型根据已经出现的单词输出下一个出现的单词的概率分布，通过对这个概率分布进行采样，
+就可以逐步生成完整的文本。最常见的采样方法是每次选择概率最高的词作为下一个输出，
+重复该过程，直到生成结束符号 <eos> 为止。
 
-语言模型（language model）使用概率来评估一个单词序列发生的可能性。
-比如，对于“you say goodbye”这一单词序列，语言模型给出高概率；
-对于“you say good die”这一单词序列，模型则给出低概率。
-典型的语言模型应用有机器翻译和语音识别，比如，语音识别系统会根据人的发言生成多个句子作为候选，
-此时，使用语言模型，可以按照单词序列发生的可能性对候选句子进行排序。
-用数学表示语言模型：
+Seq2Seq模型则是一类用于将一种序列转换为另一种序列的模型，广泛应用于机器翻译、语音识别等任务。
+它通常由两个模块组成：Encoder和Decoder，因此也被称为 Encoder-Decoder 模型。
+编码器将输入序列编码为一个向量表示，常见结构是 Embedding 层加 RNN 层；
+解码器则根据这个向量表示逐步生成输出序列，其生成过程可以采用前面提到的采样策略。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{8-1.pdf}
+	\caption{Seq2Seq模型示例}
+\end{figure}
+
+编码器的输出是固定长度的向量，但输入序列的长度是可变的，这可能会导致部分信息丢失。
+为了解决这个问题，我们可以使用编码器在每个时间步的隐藏状态，将其拼接成一个矩阵，作为解码器的输入。
+由于解码器原本只接收一个向量输入，因此也需要相应地进行调整。我们可以通过对该矩阵的行向量进行加权平均来将其转换为向量，
+而加权平均中权重的确定，就是注意力机制（Attention Mechanism）所解决的问题。
+
+\section{Self-Attention}
+在基于 RNN 的 Seq2Seq 模型中，注意力机制使得解码器在生成每个输出单词时，能够动态地关注输入序列中的不同部分。
+例如，在将 “I love you” 翻译为 “我爱你” 的过程中，生成“我”时模型更倾向于关注“I”，而生成“爱”时则更多关注“love”。
+既然输出序列可以使用注意力机制，那么输入序列是否也可以使用注意力机制呢？
+
+答案是肯定的，这正是 Transformer 模型中自注意力机制（Self-Attention）的作用。
+需要说明的是，Transformer 作为 Seq2Seq 模型的一种实现方式，也包含类似于基于 RNN 的 Seq2Seq 模型中的注意力机制，
+这部分在 Transformer 中被称为交叉注意力（Cross-Attention）。
+让我们通过一个例子来快速理解自注意力机制，例句：
+\begin{quotation}
+	A dog ate the food because it was hungry
+\end{quotation}
+显然，例句中的代词 it 指代的是 dog  而不是 food，自注意力机制的作用就是关注句子间单词的关系。
+
+将句子输入模型的编码器，得到一个输出矩阵 $\mathbf{X}$，为了计算自注意力，我们需要再创建三个新的矩阵：
+查询（query）矩阵 $\mathbf{Q}$、键（key）矩阵 $\mathbf{K}$，以及值（value）矩阵 $\mathbf{V}$。为了创建它们，
+我们需要先创建另外三个权重（weight）矩阵，$\mathbf{W}^Q$、$\mathbf{W}^K$、$\mathbf{W}^V$。
+用矩阵 $\mathbf{X}$ 分别乘以矩阵 $\mathbf{W}^Q$、$\mathbf{W}^K$、$\mathbf{W}^V$，
+依次创建出 $\mathbf{Q}$、 $\mathbf{K}$ 和 $\mathbf{V}$。
+值得注意的是，权重矩阵 $\mathbf{W}^Q$、$\mathbf{W}^K$ 和 $\mathbf{W}^V$ 的初始值完全是随机的，
+但最优值则需要通过训练获得。我们取得的权值越优，通过计算所得的查询矩阵、键矩阵和值矩阵也会越精确。
+
+假设输入句子为“I am good”，自注意力机制首先要计算查询矩阵 $\boldsymbol{Q}$ 与键矩阵 $\boldsymbol{K}^\mathrm{T}$ 的点积。
+$$
+	\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T} =
+	\begin{bmatrix}
+		\boldsymbol{q}_1 \cdot \boldsymbol{k}_1 & \boldsymbol{q}_1 \cdot \boldsymbol{k}_2 & \boldsymbol{q}_1 \cdot \boldsymbol{k}_3 \\
+		\boldsymbol{q}_2 \cdot \boldsymbol{k}_1 & \boldsymbol{q}_2 \cdot \boldsymbol{k}_2 & \boldsymbol{q}_2 \cdot \boldsymbol{k}_3 \\
+		\boldsymbol{q}_3 \cdot \boldsymbol{k}_1 & \boldsymbol{q}_3 \cdot \boldsymbol{k}_2 & \boldsymbol{q}_3 \cdot \boldsymbol{k}_3 \\
+	\end{bmatrix}
+$$
+
+首先，来看 $\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T}$ 矩阵的第一行，可以看到，
+这一行计算的是查询向量 $\boldsymbol{q}_1$（I）与所有的键向量 $\boldsymbol{k}_1$（I）、$\boldsymbol{k}_2$（am）和 $\boldsymbol{k}_3$（good）的点积。
+通过计算两个向量的点积可以知道它们之间的相似度。
+因此，通过计算查询向量（$\boldsymbol{q}_1$）和键向量（$\boldsymbol{k}_1$、$\boldsymbol{k}_2$、$\boldsymbol{k}_3$）的点积，
+可以了解单词 I 与句子中的所有单词的相似度。我们了解到, I 这个词与自己的关系比与 am 和 good 这两个词的关系更紧密，
+因为点积值 110 大于 90 和 80。
+
+\begin{table}[h]
+	\centering
+	$$
+		\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T} =
+		\begin{bmatrix}
+			110 & 90 & 80  \\
+			70  & 99 & 70  \\
+			90  & 70 & 100 \\
+		\end{bmatrix}
+	$$
+	\caption{点积示例，本节的结果均为假设值，后续不再说明}
+\end{table}
+
+自注意力机制的第 2 步是将 $\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T}$ 矩阵除以键向量维度的平方根，
+这样做的目的主要是获得稳定的梯度。
+
+目前所得的相似度分数尚未被归一化，所以第 3 步是使用 softmax 函数对其进行归一化处理。
+应用 softmax 函数将使数值分布在 0 到 1 的范围内，且每一行的所有数之和等于 1。
+这个矩阵被称为分数（score）矩阵，通过它，我们可以了解句子中的每个词与所有词的相关程度。
+比如：I 这个词与它本身的相关程度是 90\%，与 am 这个词的相关程度是 7\%，与 good 这个词的相关程度是 3\%。
+$$
+	\text{softmax}\left(\frac{\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T}}{\sqrt{d_k}}\right) =
+	\begin{bmatrix}
+		            & \text{I} & \text{am} & \text{good} \\
+		\text{I}    & 0.90     & 0.07      & 0.03        \\
+		\text{am}   & 0.025    & 0.95      & 0.025       \\
+		\text{good} & 0.21     & 0.03      & 0.76        \\
+	\end{bmatrix}
+$$
+
+自注意力机制的最后一步是计算注意力矩阵 $\boldsymbol{Z}$，
+注意力矩阵包含句子中每个单词的注意力值。它通过将分数矩阵乘以值矩阵 $\boldsymbol{V}$ 得出。
+
 \begin{align*}
-	P(w_1, \dots, w_m) & = P(w_m \mid w_1, \dots, w_{m-1}) \cdot P(w_{m-1} \mid w_1, \dots, w_{m-2}) \cdots P(w_2 \mid w_1) \cdot P(w_1) \\
-	                   & = \prod_{t=1}^{m} P(w_t \mid w_1, \dots, w_{t-1})
+	Z & = \text{softmax}\left(\frac{\boldsymbol{Q} \cdot \boldsymbol{K}^\mathrm{T}}{\sqrt{d_k}}\right) \boldsymbol{V} \\
+	  & =
+	\begin{bmatrix}
+		0.90  & 0.07 & 0.03  \\
+		0.025 & 0.95 & 0.025 \\
+		0.21  & 0.03 & 0.76  \\
+	\end{bmatrix}
+	\begin{bmatrix}
+		67.85 & 91.2 & \ldots & 0.13 \\
+		13.13 & 63.1 & \ldots & 4.44 \\
+		12.12 & 96.1 & \ldots & 43.4 \\
+	\end{bmatrix}                                                                                      \\                                                                                              \\
+	  & =
+	\begin{bmatrix}
+		\boldsymbol{z}_1 \\
+		\boldsymbol{z}_2 \\
+		\boldsymbol{z}_3 \\
+	\end{bmatrix}
 \end{align*}
 
-假设我们将CBOW模型改造成语言模型，那么首先得将原来对称的上下文改成只有目标词左侧的上下文，这样可以近似实现语言模型：
+可以看出，单词 I 的自注意力值 $\boldsymbol{z}_1$ 是分数加权的值向量之和。
+所以，$\boldsymbol{z}_1$ 的值将包含 90\% 的值向量 $\boldsymbol{v}_1$（I）、7\% 的值向量 $\boldsymbol{v}_2$（am），
+以及 3\% 的值向量 $\boldsymbol{v}_3$（good）。
 $$
-	P(w_1, \dots, w_m) = \prod_{t=1}^{m} P(w_t \mid w_1, \dots, w_{t-1}) \approx \prod_{t=1}^{m} P(w_t \mid w_{t-2}, w_{t-1})
+	\boldsymbol{z}_1 = 0.90 \begin{bmatrix} 67.85 & 91.2 & \ldots \end{bmatrix} + 0.07 \begin{bmatrix} 13.13 & 63.1 & \ldots \end{bmatrix} + 0.03 \begin{bmatrix} 12.12 & 96.1 & \ldots \end{bmatrix}
 $$
-不过这个实现还是有点问题，首先是它只能处理固定长度的上下文，会有信息丢失；其次是上下文的单词顺序会被忽视，
-比如，(you, say) 和 (say, you) 会被作为相同的内容进行处理。
-
-\section{RNN介绍}
-循环神经网络（Recurrent Neural Network，RNN）就可以很好地解决上述问题。
-之前我们看到的神经网络都是前馈型神经网络，网络的传播方向是单向的，
-虽然前馈网络结构简单、易于理解，但它不能很好地处理时间序列数据。
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.35\textwidth, keepaspectratio]{7-1.pdf}
-	\caption{RNN层示例}
-\end{figure}
-
-RNN 层有环路，通过该环路，数据可以在层内循环。时序数据 $(x_0, x_1, ··· , x_t, ···)$ 被输入到层中。
-然后，以与输入对应的形式，输出 $(h_0, h_1, ··· , h_t, ···)$。RNN 有两个权重，
-分别是将输入$x$转化为输出$h$的权重$W_x$和将前一个 RNN 层的输出转化为当前时刻的输出的权重$W_h$。
-RNN的计算用数学表示为：$h_t = \tanh(h_{t-1} W_h + x_t W_x + b)$。
-RNN 的输出$h_t$称为隐藏状态（hidden state）或隐藏状态向量（hidden state vector）。
-
-由于RNN 层有环路，因此不能直接使用前馈神经网络的反向传播算法，
-RNN的方向传播是基于时间的反向传播（Back Propagation Through Time，BPTT），
-具体做法是展开RNN的循环，把它看作普通的神经网络，然后运用之前的反向传播方法即可。
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.9\textwidth, keepaspectratio]{7-2.pdf}
-	\caption{RNN的展开}
-\end{figure}
-
-在处理长度为 1000 的时序数据时，如果展开 RNN 层，它将成为在水
-平方向上排列有 1000 个层的网络，序列太长的话，会出现计算量或者内存使用量方面的问题，
-此外，随着层变长，梯度逐渐变小，梯度将无法向前一层传递。
-因此，考虑将时间轴方向上过长的网络在合适的位置进行截断，从而创建多个小型网络，
-然后对截出来的小型网络执行误差反向传播法，这个方法称为 Truncated BPTT。
-
-在RNN的学习中，为了执行 mini-batch 学习，需要进将输入数据进行“偏移”。
-对长度为1000的时序数据，如果将批大小设为 2，那么第 1 笔样本数据从头开始按顺序输入，
-第 2 笔数据就从第 500 个数据开始按顺序输入。
-
-\section{语言模型的评估}
-困惑度（perplexity）常被用作评价语言模型的预测性能的指标，困惑度表示“概率的倒数”。
-考虑“you say goodbye and i say hello.”语料库，假设在向语言模型传入单词 you 时会输出的概率分布中，
-单词是 say 的概率为 0.2，那么困惑度就是 1/0.2=5。困惑度可以解释为下一个可以选择的选项的数量，
-在刚才的例子中，模型的困惑度是 5，这意味着下一个要出现的单词的候选个数为 5 个。
-在输出数据为多个的情况下，困惑度计算公式为：$Perplexity = e^L$，其中，L为交叉熵损失函数的值。
-
-\section{梯度消失和梯度爆炸}
-前面介绍的简单的RNN在无法很好地学习到时序数据的长期依赖关系。RNN中使用了函数$\tanh(x)$，
-它的导数为$1 - \tanh^2(x)$，这个值小于1，并且随着 x 远离 0，它的值在变小，
-这就导致RNN在处理长序列时容易出现梯度消失的问题。另外，RNN中使用了矩阵乘积，
-可能导致梯度消失或者梯度爆炸，这里不具体分析了。
-
-梯度爆炸的问题可以通过梯度裁剪（gradients clipping）来解决，
-$$
-	g \leftarrow
-	\begin{cases}
-		g,                             & \text{if } \|g\|_2 \leq \tau \\
-		g \cdot \dfrac{\tau}{\|g\|_2}, & \text{if } \|g\|_2 > \tau
-	\end{cases}
-$$
-这里假设可以将神经网络用到的所有参数的梯度整合成一个向量 $g$，且阈值设置为 $\tau$。
-
-\section{LSTM}
-在 RNN 的学习中，梯度消失也是一个大问题，为了解决这个问题，LSTM（Long Short-Term Memory）中增加了一种名为“门”的结构，
-并且 LSTM 中有专门的权重参数用于控制门的开合程度，这些权重参数也会在学习中被更新。
-在 LSTM 中存在记忆单元 c，仅在 LSTM 层内部接收和传递数据，不向其他层输出。
-其中$h_t = \tanh(c_t)$。
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.4\textwidth, keepaspectratio]{7-3.pdf}
-	\caption{RNN与LSTM}
-\end{figure}
-
-输出门（output gate）针对 $\tanh(c_t)$ 的元素，调整它们作为下一时刻的隐藏状态的重要程度。
-输出门的开合程度根据输入 $x_t$ 和上一个状态 $h_{t−1}$ 求出($\sigma$表示sigmod函数)，
-最后将这个 $o_t$ 和 $\tanh(c_t)$ 的对应元素的乘积作为 $h_t$ 输出。：
-$$
-	o_t = \sigma (x_t W_x^{(o)} + h_{t-1} W_h^{(o)} + b^{(o)})
-$$
-
-遗忘门（forget gate）是一个忘记不必要记忆的门，遗忘门的输出 $f_t$ 与记忆单元 $c_{t-1}$ 相乘，生成新的记忆单元 $c_t$：
-$$f_t = \sigma (x_t W_x^{(f)} + h_{t-1} W_h^{(f)} + b^{(f)})$$
-
-遗忘门用来遗忘记忆，现在我们还想向记忆单元添加一些应当记住的新信息，为此我们添加新的 $\tanh$ 节点，
-通过将这个 $g_t$ 加到上一时刻的 $c_{t−1}$ 上，从而形成新的记忆:
-$$g_t = \tanh ( x_t W_x^{(g)} + h_{t-1} W_h^{(g)} + b^{(g)})$$
-
-最后添加一个输入门（input gate），将 $i_t$ 和 $g_t$ 的对应元素的乘积添加到记忆单元中：
-$$i_t = \sigma (x_t W_x^{(i)} + h_{t-1} W_h^{(i)} + b^{(i)})$$
-
-因为在LSTM中，记忆单元的更新仅有+和x运算，因此梯度消失和梯度爆炸问题都得到有效解决。
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.7\textwidth, keepaspectratio]{7-4.png}
-	\caption{LSTM的计算过程}
+	\includegraphics[width=0.3\textwidth, keepaspectratio]{8-2.pdf}
+	\caption{自注意力计算流程}
 \end{figure}

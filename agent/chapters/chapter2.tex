@@ -1,15 +1,15 @@
 \chapter{误差反向传播}
-\section{计算图简介}
 在上一章中，我们提到可以通过梯度法来更新参数、最小化损失函数，并使用数值微分来近似
 计算梯度，这种方法虽然简单直观，但当网络层数增多、参数量变大时，数值微分需要对每个参数
 分别施加微小扰动并重新计算整个网络，计算量会急剧增大，效率极低。为了解决这个问题，我们
-需要一种更高效的求导方法——误差反向传播，而计算图是理解反向传播的关键。
+需要一种更高效的求导方法——误差反向传播。
 
-计算图（Computational Graph）是一种将复杂的数学表达式分解为基本运算单元并用图结构表示的方法。
+\section{计算图简介}
+计算图是理解反向传播的关键，计算图（Computational Graph）是一种将复杂的数学表达式分解为基本运算单元并用图结构表示的方法。
 在计算图中，节点（Node）表示变量或操作（如加法、乘法、激活函数等），边（Edge）表示数据在操作之间的流动或依赖关系。
 
 用计算图解题的情况下，需要先构建计算图，然后在计算图上，从左向右进行计算。
-这里的”从左向右进行计算”被称为正向传播（forward propagation）。
+这里的“从左向右进行计算”被称为正向传播（forward propagation）。
 事实上，也存在反向传播（backward propagation），反向传播将在接下来的导数计算中发挥重要作用。
 
 假设小明在超市买了两个 5 元/个的苹果，消费税为 $10\%$，请计算他需要支付的总金额。
@@ -29,13 +29,13 @@
 
 \section{反向传播}
 再来思考一下之前的问题，我们计算了购买 2 个苹果时加上消费税最终需要支付的金额。然后
-现在我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求”支付金额关于苹果的
+现在我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求“支付金额关于苹果的
 价格的导数”。具体来说，设苹果的价格为 $x$，支付金额为 $L$，则相当于求 $\frac{dL}{dx}$。
 当苹果的价格稍微上涨时，支付金额会增加多少。
 
 反向传播的原理是，从输出端开始，沿着计算图从右向左，将每个节点的输入值乘以对应的局
 部导数，逐步传递下去。在这个例子中，反向传播从右向左传递导数的值（$1 \to 1.1 \to 2.2$）。从这
-个结果中可知，”支付金额关于苹果的价格的导数”的值是 $2.2$。这意味着，如果苹果的价格上涨 $1$
+个结果中可知，“支付金额关于苹果的价格的导数”的值是 $2.2$。这意味着，如果苹果的价格上涨 $1$
 元，最终的支付金额会增加 $2.2$ 元。可以看出，计算图的优点是，可以通过反向传播高效地计算各
 个变量的导数值。
 
@@ -63,3 +63,177 @@
 	\includegraphics[width=0.8\textwidth, keepaspectratio]{2-3.pdf}
 	\caption{反向传播示例}
 \end{figure}
+
+\section{参数优化方法}
+通过反向传播算法，我们可以高效地计算损失函数关于每个参数的梯度。然而，如何利用这些梯度来更新参数，使得损失函数能够尽可能快地收敛到最小值，这就是参数优化方法要解决的问题。
+
+\subsection{SGD}
+随机梯度下降（Stochastic Gradient Descent）是最基本的优化方法。在第 1 章中，我们介绍的梯度法更新公式实际上就是 SGD，其核心思想是沿着梯度的反方向更新参数，更新规则为：
+\begin{equation*}
+	\theta \leftarrow \theta - \eta \nabla_\theta L
+\end{equation*}
+其中，$\theta$ 是参数，$\eta$ 是学习率，$\nabla_\theta L$ 是损失函数关于参数的梯度。
+
+SGD 的优点是简单、计算开销小，但 SGD 也存在一些问题。
+在损失函数的等高线呈狭长椭圆形（即不同方向上曲率差异很大）时，梯度方向会频繁地指向山谷两侧，导致参数在山谷两侧来回震荡，
+即呈“之”字形移动，而沿山谷方向的进展却十分缓慢。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth, keepaspectratio]{2-4.pdf}
+	\caption{SGD 在 $f(x,y) = \frac{1}{10}x^2 + y^2$ 上的优化轨迹}
+\end{figure}
+
+\subsection{Momentum}
+动量法（Momentum）在 SGD 的基础上引入了"速度"的概念，模拟物理学中的惯性。其更新规则为：
+\begin{align*}
+	v      & \leftarrow \alpha v + \eta \nabla_\theta L \\
+	\theta & \leftarrow \theta - v
+\end{align*}
+其中，$v$ 是速度，$\alpha$ 是动量衰减参数。
+
+这个更新规则可以用物理中的小球滚动来直观理解：把损失函数想象成一个凹凸不平的地面，参数更新的过程就像一个小球在其上滚动。
+式中的 $\eta \nabla_\theta L$ 相当于小球受到的滚动的力（沿坡度方向），而 $v$ 是小球当前的速度，$\alpha v$ 项表示速度的惯性——小球会保留一部分之前的运动状态。
+当物体不受任何力时，$\alpha v$ 这一项承担使物体逐渐减速的任务，对应物理上的地面摩擦或空气阻力。
+因此，当梯度方向持续一致时，小球越滚越快；当梯度方向频繁变化时（如狭长山谷），惯性会抑制来回震荡，使小球更稳定地朝谷底前进。
+
+\subsection{AdaGrad}
+在神经网络的学习中，学习率的值很重要。学习率过小，会导致学习花费过多时间；反过来，学习率过大，则会导致学习发散而不能正确进行。
+在关于学习率的优化中，有一种被称为学习率衰减（learning rate decay）的方法，即随着学习的进行，使学习率逐渐减小。
+实际上，一开始"多"学，然后逐渐"少"学的方法，在神经网络的学习中经常被使用。
+
+AdaGrad（Adaptive Gradient）发展了这种想法，它为每个参数维护一个独立的学习率。
+对于梯度较大的参数，学习率会相应减小；对于梯度较小的参数，学习率会相应增大。其更新规则为：
+\begin{align*}
+	G      & \leftarrow G + (\nabla_\theta L)^2                                   \\
+	\theta & \leftarrow \theta - \frac{\eta}{\sqrt{G + \epsilon}} \nabla_\theta L
+\end{align*}
+其中，$G$ 是历史梯度平方的累积和，$\epsilon$ 是一个极小值（如 $10^{-8}$），用于防止分母为零。
+
+\subsection{RMSprop}
+AdaGrad 虽然实现了自适应学习率，但它有一个明显的缺点：随着训练的进行，$G$ 会不断累积所有历史梯度的平方和，导致学习率单调递减，最终可能过早停止学习。
+为了改善这个问题，可以使用RMSprop（Root Mean Square Propagation）方法：不再累积所有历史梯度的平方和，而是使用指数加权移动平均来只关注最近的梯度信息。
+其更新规则为：
+\begin{align*}
+	G      & \leftarrow \rho G + (1 - \rho) (\nabla_\theta L)^2                   \\
+	\theta & \leftarrow \theta - \frac{\eta}{\sqrt{G + \epsilon}} \nabla_\theta L
+\end{align*}
+其中，$\rho$ 是衰减率，控制历史信息的衰减速度。
+
+\subsection{Adam}
+Adam（Adaptive Moment Estimation）结合了 Momentum 和 AdaGrad，其更新规则为：
+\begin{align*}
+	m       & \leftarrow \beta_1 m + (1 - \beta_1) \nabla_\theta L               \\
+	v       & \leftarrow \beta_2 v + (1 - \beta_2) (\nabla_\theta L)^2           \\
+	\hat{m} & \leftarrow \frac{m}{1 - \beta_1^t}                                 \\
+	\hat{v} & \leftarrow \frac{v}{1 - \beta_2^t}                                 \\
+	\theta  & \leftarrow \theta - \frac{\eta}{\sqrt{\hat{v}} + \epsilon} \hat{m}
+\end{align*}
+其中，$m$ 是梯度的一阶矩估计（相当于动量项），$v$ 是梯度的二阶矩估计（用于自适应学习率），$\beta_1$ 和 $\beta_2$ 是衰减系数，
+$t$ 是当前迭代步数，$\hat{m}$ 和 $\hat{v}$ 是对 $m$ 和 $v$ 的偏差修正。
+
+\subsection{AdamW}
+在机器学习中，为了防止模型过拟合，我们通常会引入权重衰减（Weight Decay）。
+该方法通过在学习的过程中对大的权重进行惩罚，来抑制过拟合。具体来说，为损失函数加上权重的 $L_2$ 范数的平方，用符号表示的话，
+如果将权重记为 $W$，$L_2$ 范数的权重衰减就是 $\frac{1}{2}\lambda W^2$，然后将这个 $\frac{1}{2}\lambda W^2$ 加到损失函数上。
+这里，$\lambda$ 是控制正则化强度的超参数，$\lambda$ 设置得越大，对大的权重施加的惩罚就越重。
+
+AdamW 是 Adam 的一个改进版本，主要解决了 Adam 在权重衰减实现上的问题。
+在原始的 Adam 中，如果权重衰减被直接加到了梯度中（即加上 $\lambda W$），会导致正则化效果不稳定。
+这是因为 Adam 的自适应学习率机制会为每个参数维护不同的有效学习率 $\frac{\eta}{\sqrt{\hat{v}} + \epsilon}$。
+当 $\lambda W$ 被加到梯度中时，它会影响二阶矩估计 $\hat{v}$，导致自适应学习率反过来"缩放"权重衰减的效果：
+对于梯度较大的参数，$\hat{v}$ 较大，有效学习率较小，权重衰减的效果被削弱；
+对于梯度较小的参数，$\hat{v}$ 较小，权重衰减的效果被放大。
+这种不一致的行为使得不同参数受到的正则化强度不一致，正则化效果变得不稳定。
+
+AdamW 将权重衰减从梯度计算中解耦出来，直接作用在参数更新上：
+\begin{align*}
+	m       & \leftarrow \beta_1 m + (1 - \beta_1) \nabla_\theta L                                               \\
+	v       & \leftarrow \beta_2 v + (1 - \beta_2) (\nabla_\theta L)^2                                           \\
+	\hat{m} & \leftarrow \frac{m}{1 - \beta_1^t}                                                                 \\
+	\hat{v} & \leftarrow \frac{v}{1 - \beta_2^t}                                                                 \\
+	\theta  & \leftarrow \theta - \eta \left( \frac{\hat{m}}{\sqrt{\hat{v}} + \epsilon} + \lambda \theta \right)
+\end{align*}
+其中，$\lambda$ 是权重衰减系数。
+实验表明，AdamW 在训练深度神经网络（尤其是 Transformer 模型）时，通常比 Adam 具有更好的泛化性能。
+
+\section{归一化和正则化}
+\subsection{权重初始值}
+如果我们把所有权重初始化为0，那么会发现学习无法正确进行。为什么不能将权重设为0呢？
+严格来说，权重初始值不能全部设为一样的值，因为如果这样的话，每一层的神经元都会计算出相同的结果，
+更新相同的梯度，最终得到相同的权重——这意味着无论有多少个神经元，它们都只能学到相同的特征，这显然失去了多神经元的意义。
+
+那么，应该使用什么样的分布来初始化权重呢？一个常见的做法是使用高斯分布进行随机初始化，但权重的尺度（scale）需要精心设计。
+核心目标是：让各层激活值的分布保持适当的广度。原因在于，如果各层传递的激活值分布差异过大或过于集中，信号在逐层传递的过程中会逐渐失真，导致学习困难。具体来说：
+\begin{itemize}
+	\item \textbf{尺度过大}（标准差过大）：意味着初始权重矩阵中存在大量绝对值极大的数值。前向传播时，激活值会随着层数加深而剧烈放大。
+	      若使用 Sigmoid 等有界激活函数，激活值会迅速落入饱和区（在输入很大或很小时，输出几乎不变）导致\textbf{梯度消失}；
+	      若使用 ReLU 等无界激活函数，则会直接引发数值爆炸，导致反向传播时\textbf{梯度爆炸}。
+	\item \textbf{尺度过小}（标准差过小）：由于 $y = \sum w_i x_i$，输入信号的方差会随着网络层数的加深呈指数级衰减，导致表现力坍缩。
+\end{itemize}
+
+Xavier 初始化是一种常见的初始化方式，它的目标是使各层激活值呈现相同广度的分布，由此推导出了合适的权重尺度。
+下面给出推导过程，设某一层的输入为 $x_1, x_2, \ldots, x_n$，对应的权重为 $w_1, w_2, \ldots, w_n$，则该层一个神经元的输出为：
+\begin{equation*}
+	y = w_1 x_1 + w_2 x_2 + \cdots + w_n x_n
+\end{equation*}
+假设各 $x_i$ 相互独立且同分布，各 $w_i$ 也相互独立且同分布，且 $x_i$ 与 $w_i$ 相互独立，均值均为 $0$。则 $y$ 的方差为：
+\begin{equation*}
+	\mathrm{Var}(y) = \sum_{i=1}^n \mathrm{Var}(w_i x_i) = \sum_{i=1}^n \mathrm{Var}(w_i) \mathrm{Var}(x_i) = n \cdot \mathrm{Var}(w) \cdot \mathrm{Var}(x)
+\end{equation*}
+为了使各层激活值的方差保持一致，即 $\mathrm{Var}(y) = \mathrm{Var}(x)$，需要：
+\begin{equation*}
+	n \cdot \mathrm{Var}(w) \cdot \mathrm{Var}(x) = \mathrm{Var}(x) \implies \mathrm{Var}(w) = \frac{1}{n}
+\end{equation*}
+因此，权重初始值从均值为 $0$、方差为 $\frac{1}{n}$ 的分布中采样：
+\begin{equation*}
+	W \sim N\left(0, \frac{1}{n}\right)
+\end{equation*}
+
+Xavier 初始化是以激活函数是线性函数（sigmoid 和 tanh 等函数在中央附近可被视为线性函数）为前提推导出来的，He 初始化则是针对 ReLU 激活函数提出的。
+由于 ReLU 会将负值置为零，输出的方差会减小为原来的一半，因此需要将方差放大一倍。如果前一层的节点数为 $n$，则权重从均值为 $0$、方差为 $\frac{2}{n}$ 的分布中采样：
+\begin{equation*}
+	W \sim N\left(0, \frac{2}{n}\right)
+\end{equation*}
+
+\subsection{归一化}
+前文提到，权重初始化试图让各层激活值保持适当的广度，但这只是初始时刻的“一次性保障”——随着训练的进行，参数不断更新，各层激活值的分布会逐渐偏离初始状态。
+归一化则是在训练过程中\textbf{强制性地}将每层的输入拉回到一个良好的分布，具体而言，就是使数据分布均值为 $0$、方差为 $1$ 。
+
+这种对分布的约束还带来了另一个好处。回顾前文参数优化方法中提到的问题：当损失函数的等高线呈狭长椭圆形时，梯度方向会频繁地指向山谷两侧，导致必须使用极小的学习率慢吞吞地下山。
+而归一化将各层输入缩放到相似的区间，使损失函数的等高线变得接近“正圆形”，梯度方向直接指向最小值，允许使用更大的学习率，从而大幅加速收敛。
+常用的归一化方法有 Batch Normalization(BN) 和Layer Normalization(RN)。
+
+Batch Normalization，顾名思义，以进行学习时的 mini-batch 为单位进行归一化。
+对于一个 mini-batch 中的数据 $\{x_1, x_2, \ldots, x_m\}$（同一特征在不同样本上的取值），计算过程如下：
+\begin{align*}
+	\mu_B      & \leftarrow \frac{1}{m} \sum_{i=1}^m x_i                     \\
+	\sigma_B^2 & \leftarrow \frac{1}{m} \sum_{i=1}^m (x_i - \mu_B)^2         \\
+	\hat{x}_i  & \leftarrow \frac{x_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}} \\
+	y_i        & \leftarrow \gamma \hat{x}_i + \beta
+\end{align*}
+其中，$\mu_B$ 是 mini-batch 的均值，$\sigma_B^2$ 是 mini-batch 的方差，$\hat{x}_i$ 是归一化后的值，$\gamma$ 和 $\beta$ 是可学习的缩放和平移参数，$\epsilon$ 是一个极小值，用于防止分母为零。
+
+与 BN 不同，Layer Normalization 不依赖 batch 维度，而是对单个样本在该层的所有神经元输出进行标准化。
+对于一个样本的激活值 $\{a_1, a_2, \ldots, a_d\}$（同一层中 $d$ 个神经元的输出），计算过程如下：
+\begin{align*}
+	\mu_L      & \leftarrow \frac{1}{d} \sum_{i=1}^d a_i                     \\
+	\sigma_L^2 & \leftarrow \frac{1}{d} \sum_{i=1}^d (a_i - \mu_L)^2         \\
+	\hat{a}_i  & \leftarrow \frac{a_i - \mu_L}{\sqrt{\sigma_L^2 + \epsilon}} \\
+	y_i        & \leftarrow \gamma \hat{a}_i + \beta
+\end{align*}
+其中，$\mu_L$ 是该层所有神经元输出的均值，$\sigma_L^2$ 是方差，$\gamma$ 和 $\beta$ 同样是可学习的缩放和平移参数。
+
+LN 与 BN 的关键区别在于归一化的方向不同：BN 沿 batch 维度归一化（同一特征跨样本），LN 沿特征维度归一化（同一层跨神经元）。
+因此，LN 不依赖 batch size，适用于 batch size 较小的场景，也是 Transformer 等模型的标准配置。
+
+\subsection{正则化}
+正则化（Regularization）是一类用于抑制过拟合、提升泛化能力的技术的统称。
+除了前文介绍的权重衰减（L2 正则化），常用正则化方法还有 Dropout 和数据增强（Data Augmentation）。
+
+Dropout 是一种在学习过程中随机删除神经元的方法，
+具体来说，在每次前向传播时，Dropout 会以概率 $p$ 随机选择神经元并将其输出置为零，其余神经元的输出则除以 $1-p$ 进行缩放。
+在测试时，Dropout 不再随机关闭神经元，所有神经元都参与计算。
+
+数据增强则是从数据层面入手来抑制过拟合：通过对训练数据施加各种变换（如旋转、翻转、裁剪、颜色抖动等），生成更多样化的训练样本，
+从而增加数据的有效规模，迫使模型学习更具泛化性的特征。
