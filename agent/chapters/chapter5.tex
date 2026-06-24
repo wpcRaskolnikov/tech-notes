@@ -1,6 +1,6 @@
-\chapter{RNN}
-\section{语言模型}
-再考虑一下 word2vec 的 CBOW 模型，假设单词序列为$w_1, w_2, ··· , w_T$且窗口大小为1，
+\chapter{语言模型}
+\section{语言模型简介}
+回忆一下上文讲的 CBOW 模型，假设单词序列为$w_1, w_2, ··· , w_T$且窗口大小为1，
 它所做的事情就是从上下文$w_{t−1}$ 和 $w_{t+1}$预测目标词$w_t$。
 当给定上下文时目标词是 $w_t$ 的概率为$P(w_t \mid w_{t-1}, w_{t+1})$，CBOW 模型就是对这一后验概率进行建模，
 如果使用交叉熵误差，其损失函数是$L = -\log P(w_t \mid w_{t-2}, w_{t-1})$。在上一章我们使用 CBOW 模型的权重获得单词的表示，
@@ -21,22 +21,25 @@
 $$
 	P(w_1, \dots, w_m) = \prod_{t=1}^{m} P(w_t \mid w_1, \dots, w_{t-1}) \approx \prod_{t=1}^{m} P(w_t \mid w_{t-2}, w_{t-1})
 $$
-不过这个实现还是有点问题，首先是它只能处理固定长度的上下文，会有信息丢失；其次是上下文的单词顺序会被忽视，
-比如，(you, say) 和 (say, you) 会被作为相同的内容进行处理。
 
-\section{RNN介绍}
-循环神经网络（Recurrent Neural Network，RNN）就可以很好地解决上述问题。
-之前我们看到的神经网络都是前馈型神经网络，网络的传播方向是单向的，
+\section{RNN}
+语言模型虽然能用 CBOW 来近似实现，但它存在两个明显的局限。
+第一，它的上下文窗口大小是固定的，只能看到有限个过去的单词，更远的信息会被丢弃。
+第二，它对上下文中的单词做平均，因此单词的顺序信息会被忽视，比如，(you, say) 和 (say, you) 会被作为相同的内容进行处理。
+循环神经网络（Recurrent Neural Network，RNN）可以很好地解决上述问题。
+
+之前我们看到的神经网络都是前馈型神经网络，网络的传播方向是单向的，没有环路，
 虽然前馈网络结构简单、易于理解，但它不能很好地处理时间序列数据。
+RNN 与前馈网络的关键区别在于它引入了环路，使得网络能够维持一个内部状态，从而捕捉序列中的时序依赖关系。
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.35\textwidth, keepaspectratio]{7-1.pdf}
+	\includegraphics[width=0.35\textwidth, keepaspectratio]{5-1.pdf}
 	\caption{RNN层示例}
 \end{figure}
 
 RNN 层有环路，通过该环路，数据可以在层内循环。时序数据 $(x_0, x_1, ··· , x_t, ···)$ 被输入到层中。
 然后，以与输入对应的形式，输出 $(h_0, h_1, ··· , h_t, ···)$。RNN 有两个权重，
-分别是将输入$x$转化为输出$h$的权重$W_x$和将前一个 RNN 层的输出转化为当前时刻的输出的权重$W_h$。
+分别是将转化输入$x$的权重$W_x$和将前一个 RNN 层的输出转化的权重$W_h$。
 RNN的计算用数学表示为：$h_t = \tanh(h_{t-1} W_h + x_t W_x + b)$。
 RNN 的输出$h_t$称为隐藏状态（hidden state）或隐藏状态向量（hidden state vector）。
 
@@ -45,7 +48,7 @@ RNN的方向传播是基于时间的反向传播（Back Propagation Through Time
 具体做法是展开RNN的循环，把它看作普通的神经网络，然后运用之前的反向传播方法即可。
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.9\textwidth, keepaspectratio]{7-2.pdf}
+	\includegraphics[width=0.9\textwidth, keepaspectratio]{5-2.pdf}
 	\caption{RNN的展开}
 \end{figure}
 
@@ -59,14 +62,23 @@ RNN的方向传播是基于时间的反向传播（Back Propagation Through Time
 对长度为1000的时序数据，如果将批大小设为 2，那么第 1 笔样本数据从头开始按顺序输入，
 第 2 笔数据就从第 500 个数据开始按顺序输入。
 
-\section{语言模型的评估}
+利用RNN可以构建基于神经网络的语言模型，称为RNN语言模型（RNN Language Model，RNNLM）。
+RNNLM的结构很简单：输入层接收单词的向量表示（如词嵌入），经过RNN层处理后得到隐藏状态，
+最后通过全连接层和softmax输出下一个单词的概率分布。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.2\textwidth, keepaspectratio]{5-3.pdf}
+	\caption{RNNLM}
+\end{figure}
+
+\section{语言模型的评估和RNN的问题}
 困惑度（perplexity）常被用作评价语言模型的预测性能的指标，困惑度表示“概率的倒数”。
 考虑“you say goodbye and i say hello.”语料库，假设在向语言模型传入单词 you 时会输出的概率分布中，
 单词是 say 的概率为 0.2，那么困惑度就是 1/0.2=5。困惑度可以解释为下一个可以选择的选项的数量，
 在刚才的例子中，模型的困惑度是 5，这意味着下一个要出现的单词的候选个数为 5 个。
 在输出数据为多个的情况下，困惑度计算公式为：$Perplexity = e^L$，其中，L为交叉熵损失函数的值。
 
-\section{梯度消失和梯度爆炸}
 前面介绍的简单的RNN在无法很好地学习到时序数据的长期依赖关系。RNN中使用了函数$\tanh(x)$，
 它的导数为$1 - \tanh^2(x)$，这个值小于1，并且随着 x 远离 0，它的值在变小，
 这就导致RNN在处理长序列时容易出现梯度消失的问题。另外，RNN中使用了矩阵乘积，
@@ -82,14 +94,14 @@ $$
 $$
 这里假设可以将神经网络用到的所有参数的梯度整合成一个向量 $g$，且阈值设置为 $\tau$。
 
-\section{LSTM}
-在 RNN 的学习中，梯度消失也是一个大问题，为了解决这个问题，LSTM（Long Short-Term Memory）中增加了一种名为“门”的结构，
+\section{LSTM和GRU}
+在 RNN 的学习中，梯度消失是一个大问题，为了解决这个问题，LSTM（Long Short-Term Memory）中增加了一种名为“门”的结构，
 并且 LSTM 中有专门的权重参数用于控制门的开合程度，这些权重参数也会在学习中被更新。
 在 LSTM 中存在记忆单元 c，仅在 LSTM 层内部接收和传递数据，不向其他层输出。
 其中$h_t = \tanh(c_t)$。
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.4\textwidth, keepaspectratio]{7-3.pdf}
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{5-4.pdf}
 	\caption{RNN与LSTM}
 \end{figure}
 
@@ -113,6 +125,31 @@ $$i_t = \sigma (x_t W_x^{(i)} + h_{t-1} W_h^{(i)} + b^{(i)})$$
 因为在LSTM中，记忆单元的更新仅有+和x运算，因此梯度消失和梯度爆炸问题都得到有效解决。
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.7\textwidth, keepaspectratio]{7-4.png}
-	\caption{LSTM的计算过程}
+	\includegraphics[width=0.6\textwidth, keepaspectratio]{5-5.png}
+	\caption{LSTM}
+\end{figure}
+
+GRU（Gated Recurrent Unit）是LSTM的一种简化变体，同样通过门控机制来解决梯度消失问题。
+与LSTM不同，GRU没有记忆单元$c$，只有一个隐藏状态$h$在时间方向上传播。
+GRU使用两个门（LSTM使用三个门）：reset门$r$和update门$z$。
+
+reset门决定在多大程度上“忽略”过去的隐藏状态：
+$$r_t = \sigma(x_t W_x^{(r)} + h_{t-1} W_h^{(r)} + b^{(r)})$$
+
+update门扮演了LSTM中forget门和input门两个角色，控制隐藏状态的更新：
+$$z_t = \sigma(x_t W_x^{(z)} + h_{t-1} W_h^{(z)} + b^{(z)})$$
+
+基于reset门，计算候选隐藏状态$\tilde{h}_t$：
+$$\tilde{h}_t = \tanh(x_t W_x + (r_t \odot h_{t-1}) W_h + b)$$
+如果$r_t$为0，则候选隐藏状态仅取决于当前输入$x_t$，过去的隐藏状态被完全忽略。
+
+最终，GRU通过update门对过去的隐藏状态和候选隐藏状态进行加权，得到新的隐藏状态：
+$$h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t$$
+其中$(1 - z_t) \odot h_{t-1}$部分充当forget门的功能，从过去的隐藏状态中删除应该被遗忘的信息；
+$z_t \odot \tilde{h}_t$部分充当input门的功能，对新增的信息进行加权。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.6\textwidth, keepaspectratio]{5-6.png}
+	\caption{GRU}
 \end{figure}

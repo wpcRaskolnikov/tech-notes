@@ -1,16 +1,16 @@
-\chapter{文本生成}
+\chapter{Transformer}
 \section{Seq2Seq模型}
 语言模型根据已经出现的单词输出下一个出现的单词的概率分布，通过对这个概率分布进行采样，
 就可以逐步生成完整的文本。最常见的采样方法是每次选择概率最高的词作为下一个输出，
 重复该过程，直到生成结束符号 <eos> 为止。
 
-Seq2Seq模型则是一类用于将一种序列转换为另一种序列的模型，广泛应用于机器翻译、语音识别等任务。
+Seq2Seq模型则是另一类文本生成模型，用于将一种序列转换为另一种序列的模型，广泛应用于机器翻译、语音识别等任务。
 它通常由两个模块组成：Encoder和Decoder，因此也被称为 Encoder-Decoder 模型。
-编码器将输入序列编码为一个向量表示，常见结构是 Embedding 层加 RNN 层；
-解码器则根据这个向量表示逐步生成输出序列，其生成过程可以采用前面提到的采样策略。
-\begin{figure}[H]
+编码器常见结构是 Embedding 层加 RNN 层，用于将输入序列编码为一个向量表示；
+解码器则根据这个向量表示逐步生成输出序列，其生成过程可以参考前面提到的采样策略。
+\begin{figure}[ht]
 	\centering
-	\includegraphics[width=0.4\textwidth, keepaspectratio]{8-1.pdf}
+	\includegraphics[width=0.4\textwidth, keepaspectratio]{6-1.pdf}
 	\caption{Seq2Seq模型示例}
 \end{figure}
 
@@ -118,8 +118,144 @@ $$
 $$
 	\boldsymbol{z}_1 = 0.90 \begin{bmatrix} 67.85 & 91.2 & \ldots \end{bmatrix} + 0.07 \begin{bmatrix} 13.13 & 63.1 & \ldots \end{bmatrix} + 0.03 \begin{bmatrix} 12.12 & 96.1 & \ldots \end{bmatrix}
 $$
-\begin{figure}[H]
+\begin{figure}[ht]
 	\centering
-	\includegraphics[width=0.3\textwidth, keepaspectratio]{8-2.pdf}
+	\includegraphics[width=0.2\textwidth, keepaspectratio]{6-2.pdf}
 	\caption{自注意力计算流程}
+\end{figure}
+
+\section{位置编码}
+在 RNN 中，句子是逐词送入网络的，以 I am good 为例，首先把 I 作为输入，接下来是 am，最后是good。
+然而，Transformer 并不遵循这个模式，它将句子中的所有词并行地输入到神经网络中。
+由于是并行输入，所以词序需要通过其他方式表示，Transformer 所采用的方式是位置编码。
+
+在 Transformer 中，位置编码以以矩阵的形式表示，位置编码矩阵 $\boldsymbol{P}$ 的维度与输入矩阵 $\boldsymbol{X}$ 的维度相同。
+在将输入矩阵直接传给 Transformer 之前，我们需将位置编码矩阵 $\boldsymbol{P}$ 加到输入矩阵 $\boldsymbol{X}$ 中，再将其作为输入送入网络。
+Transformer 中使用了正弦函数来计算位置编码：
+\begin{equation*}
+	P(\text{pos}, 2i) = \sin (\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}) \quad
+	P(\text{pos}, 2i+1) = \cos (\frac{\text{pos}}{10000^{2i/d_{\text{model}}}})
+\end{equation*}
+
+在上面的等式中，$\text{pos}$ 表示该词在句子中的位置，$i$ 表示在输入矩阵中的位置。
+$$
+	\boldsymbol{P} =
+	\begin{bmatrix}
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+		\sin\left(\frac{\text{pos}}{10000^0}\right) & \cos\left(\frac{\text{pos}}{10000^0}\right) & \sin\left(\frac{\text{pos}}{10000^{2/4}}\right) & \cos\left(\frac{\text{pos}}{10000^{2/4}}\right) \\
+	\end{bmatrix}
+$$
+
+上述方法属于绝对位置编码，它将位置信息作为一个固定的向量加到输入上。
+另一种广泛使用的位置编码方法是旋转位置编码（Rotary Position Embedding，RoPE）。
+RoPE 通过对查询向量和键向量施加一个与位置相关的旋转，使得两个向量的点积自然地编码了它们之间的相对位置信息。
+具体来说，RoPE 将向量的相邻两个维度视为一个二维平面上的点，然后根据位置 $m$ 旋转一个角度 $m\theta$：
+$$
+	\begin{bmatrix} q_{2i}' \\ q_{2i+1}' \end{bmatrix}
+	=
+	\begin{bmatrix} \cos m\theta_i & -\sin m\theta_i \\ \sin m\theta_i & \cos m\theta_i \end{bmatrix}
+	\begin{bmatrix} q_{2i} \\ q_{2i+1} \end{bmatrix}
+$$
+其中 $\theta_i = 10000^{-2i/d}$。
+经过旋转后，$\boldsymbol{q}_m$ 与 $\boldsymbol{k}_n$ 的点积只依赖于相对位置 $m - n$，从而使得注意力机制天然具备捕捉相对位置关系的能力。
+RoPE 被广泛应用于 LLaMA、Qwen 等大语言模型中。
+
+然而，RoPE 的位置编码存在一个固有限制：它只能处理训练时见过的上下文长度。
+从公式可以看出，第 $i$ 组维度的旋转角度为 $m\theta_i$，不同频率的维度旋转速度差异极大。
+高频维度（$i$ 较大）旋转快，低频维度（$i$ 较小）旋转慢，在训练时的上下文长度内，低频维度可能只旋转了极小的角度，
+模型几乎没有见过更大的位置值。当推理时遇到超出训练范围的更长序列时，
+低频维度会进入从未探索过的区域，导致模型性能显著下降。
+
+YaRN（Yet another RoPE extensioN）是一种用于扩展 RoPE 上下文长度的方法。
+设缩放因子 $s = L' / L$，其中 $L$ 为训练时的上下文长度，$L'$ 为目标长度。
+定义第 $i$ 个维度的波长为 $\lambda_i = 2\pi / \theta_i$，并设定两个波长阈值 $\lambda_{\text{low}}$ 和 $\lambda_{\text{high}}$。
+YaRN 为每个维度 $i$ 定义一个缩放因子 $s_i$，将旋转角度从 $m\theta_i$ 修改为 $m\theta_i / s_i$：
+$$
+	s_i =
+	\begin{cases}
+		1,                                                                                                        & \lambda_i \geq \lambda_{\text{low}}                      \\[6pt]
+		s,                                                                                                        & \lambda_i \leq \lambda_{\text{high}}                     \\[6pt]
+		1 + (s - 1) \cdot \dfrac{\lambda_{\text{low}} - \lambda_i}{\lambda_{\text{low}} - \lambda_{\text{high}}}, & \lambda_{\text{high}} < \lambda_i < \lambda_{\text{low}}
+	\end{cases}
+$$
+
+\section{编码器与解码器}
+Transformer 的编码器由一组 N 个编码器串联而成，每一个编码器的构造都是相同的，
+由自注意力层和前馈网络层组成，每层的输出都经过残差连接和归一化层（Add \& Norm）。
+前馈网络由多个全连接层组成，一般采用 ReLU 激活函数。
+
+相较编码器，解码器的注意力层不太一样，它需要关注编码器的输出，因此解码器的注意力层分为两部分：带掩码的注意力层和交叉注意力层。
+交叉注意力层都有两个输入：一个来自带掩码的注意力层，另一个是编码器的输出。让我们用 $\boldsymbol{R}$ 来表示编码器的输出值，
+用 $\boldsymbol{M}$ 来表示由带掩码的注意力层输出的注意力矩阵，注意力的计算使用矩阵 $\boldsymbol{M}$ 创建查询矩阵 $\boldsymbol{Q}$，
+使用 $\boldsymbol{R}$ 创建键矩阵和值矩阵。
+在解码器中的带掩码的注意层中，我们对注意力计算中的矩阵进行掩码处理，确保解码器在生成每个单词时只能关注之前的单词。
+
+\begin{figure}[ht]
+	\centering
+	\begin{subfigure}[b]{0.3\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-3a.pdf}
+		\caption{Transformer编码器结构}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.35\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-3b.pdf}
+		\caption{Transformer解码器结构}
+	\end{subfigure}
+	\caption{Transformer结构}
+\end{figure}
+
+$$
+	\frac{\boldsymbol{Q}_i \cdot \boldsymbol{K}_i^\mathrm{T}}{\sqrt{d_k}} =
+	\begin{bmatrix}
+		             & \text{<sos>} & \text{我} & \text{很} & \text{好} \\
+		\text{<sos>} & 9.125        & -\infty  & -\infty  & -\infty  \\
+		\text{我}     & 5.0          & 12.37    & -\infty  & -\infty  \\
+		\text{很}     & 7.25         & 5.0      & 10.37    & -\infty  \\
+		\text{好}     & 1.5          & 1.37     & 1.87     & 10.0     \\
+	\end{bmatrix}
+$$
+
+获得解码器的输出之后，我们将其送入线性层和 softmax 层，线性层将生成一个 logit 向量，其大小等于原句中的词汇量，
+然后，将 softmax 函数应用于 logit 向量，从而得到概率分布，最后对其进行采样得到最终的文本输出。
+
+\begin{figure}[ht]
+	\centering
+	% 第一行
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-4a.pdf}
+		\caption{t = 1}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-4b.pdf}
+		\caption{t = 2}
+	\end{subfigure}
+
+	\vspace{0.5cm} % 行间距
+
+	% 第二行
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-4c.pdf}
+		\caption{t = 3}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}[b]{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{6-4d.pdf}
+		\caption{t = 4}
+	\end{subfigure}
+
+	\caption{解码器流程说明}
+\end{figure}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.7\textwidth, keepaspectratio]{6-5.pdf}
+	\caption{Transformer总结构}
 \end{figure}
