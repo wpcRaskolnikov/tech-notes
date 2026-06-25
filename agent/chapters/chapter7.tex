@@ -1,47 +1,55 @@
 \chapter{注意力机制优化}
 在上一章中，我们学习了 Transformer 的核心机制——自注意力（Self-Attention）。
-标准的多头注意力（Multi-Head Attention，MHA）在训练和推理中展现了强大的建模能力，但随着模型规模的增长和序列长度的增加，它也面临着一些实际的效率和资源问题。
+标准的注意力机制在训练和推理中展现了强大的建模能力，但随着模型规模的增长和序列长度的增加，它也面临着一些实际的效率和资源问题。
 本章将介绍几种重要的注意力机制优化方法，它们分别从不同的角度解决这些问题。
 
 \section{GQA}
-在第6章中，我们学习了多头注意力机制。在标准的多头注意力中，每个注意力头都有独立的查询矩阵 $\boldsymbol{W}^Q$、键矩阵 $\boldsymbol{W}^K$ 和值矩阵 $\boldsymbol{W}^V$。
-假设有 $h$ 个注意力头，每个头的维度为 $d_h = d / h$，那么总的参数量为 $h \times 3 \times d \times d_h = 3d^2$。
+在第6章中，我们学习了注意力机制。在标准的多头注意力（Multi-Head Attention，MHA）中，模型将输入送入 $h$ 个注意力头，
+每个头都有独立的查询矩阵 $\boldsymbol{W}^Q$、键矩阵 $\boldsymbol{W}^K$ 和值矩阵 $\boldsymbol{W}^V$。
 在推理阶段，每个头的键和值都需要被缓存下来，以便在生成下一个 token 时复用，这就是所谓的 KV Cache。
-KV Cache 的大小与头数 $h$ 和序列长度 $n$ 成正比，当模型规模增大或序列变长时，KV Cache 会占用大量显存。
+假设有 $h$ 个注意力头，每个头的维度为 $d_h = d / h$，那么单个token对应的KV Cache大小为 $h \times 2 \times d_h = 2d$。
+KV Cache 的大小与序列长度 $n$ 成正比，当序列不断变长时，KV Cache 会占用大量显存。
 
 为了减少 KV Cache 的开销，一种直观的想法是让所有注意力头共享同一组键和值，这就是多查询注意力（Multi-Query Attention，MQA）。
-在 MQA 中，只有查询矩阵 $\boldsymbol{W}^Q$ 是多头的，而键矩阵 $\boldsymbol{W}^K$ 和值矩阵 $\boldsymbol{W}^V$ 只有一个头，所有查询头共享这一组键值。
-这样，KV Cache 的大小从 $h \times n \times d_h$ 减少到 $1 \times n \times d_h$，减少了 $h$ 倍。
-然而，MQA 的表达能力下降明显，因为所有头只能依赖同一组键值来计算注意力，模型的多样性受到了限制。
+在 MQA 中，所有查询头共享一组键值，这样，序列长度为 $n$ 时，KV Cache 的大小从 $2nd$ 减少到 $2nd_h$，减少了 $h$ 倍。
+然而，由于所有头只能依赖同一组键值来计算注意力，MQA 的表达能力下降明显，模型的多样性受到了限制。
 
 分组查询注意力（Grouped Query Attention，GQA）是 MQA 和 MHA 之间的折中方案。
 在 GQA 中，将 $h$ 个查询头分成 $g$ 组（$1 \leq g \leq h$），每组共享一组键和值。
 当 $g = 1$ 时，GQA 退化为 MQA；当 $g = h$ 时，GQA 退化为 MHA。
-通常取 $g$ 为 8 或 16，这样 KV Cache 的大小减少到 $g \times n \times d_h$，同时保留了较好的表达能力。
-
 具体来说，假设查询头数为 $h$，键值头数为 $g$，每个查询头 $i$ 属于第 $\lfloor i \cdot g / h \rfloor$ 组，使用该组的键和值来计算注意力。
-GQA 被广泛应用于 LLaMA 2、Qwen 等大语言模型中，它在保持模型质量的同时，显著降低了推理时的显存占用。
+GQA 被广泛应用于 LLaMA3、Qwen3 等大语言模型中，它在保持模型质量的同时，显著降低了推理时的显存占用。
 
 \section{FlashAttention}
 在前面的注意力计算中，我们首先计算查询和键的点积得到注意力分数矩阵 $\boldsymbol{S} = \boldsymbol{Q} \boldsymbol{K}^\mathrm{T} / \sqrt{d_k}$，
 然后对 $\boldsymbol{S}$ 应用 softmax 得到注意力权重矩阵 $\boldsymbol{P}$，最后乘以值矩阵 $\boldsymbol{V}$ 得到输出 $\boldsymbol{O} = \boldsymbol{P} \boldsymbol{V}$。
 这个过程需要将 $\boldsymbol{S}$ 和 $\boldsymbol{P}$ 这两个 $n \times n$ 的矩阵存储在 GPU 的高带宽内存（HBM）中。
+由于 HBM 带宽有限（如 1.5 TB/s），随着序列变长，HBM 的读写开销将成为主要开销，成为性能瓶颈。
 
-然而，GPU 的内存层次结构存在显著差异：HBM 容量大（如 40GB）但带宽有限（如 1.5 TB/s），
-而 SRAM（片上内存）容量小（如 20MB）但带宽极高（如 19 TB/s）。
-标准注意力算法的瓶颈不在于计算量，而在于 HBM 的读写次数（IO 复杂度）。
-对于长度为 $n$ 的序列，$\boldsymbol{S}$ 和 $\boldsymbol{P}$ 的大小为 $O(n^2)$，将它们从 HBM 读写的开销成为性能瓶颈。
-
-FlashAttention 的核心思想是：通过分块计算（tiling），避免将 $O(n^2)$ 的中间矩阵写入 HBM。
+与 HBM 相比，GPU 上的 SRAM 容量虽小（如 20MB），但带宽极高（如 19 TB/s）。
+FlashAttention 的核心思想就是通过分块计算（tiling），尽可能在 SRAM 中完成计算，从而避免将 $O(n^2)$ 的中间矩阵写入 HBM。
 具体来说，将 $\boldsymbol{Q}$、$\boldsymbol{K}$、$\boldsymbol{V}$ 分成若干块（block），每次只加载一小块到 SRAM 中计算，
 计算完成后直接将结果写回 HBM，而不需要在 HBM 中存储完整的 $\boldsymbol{S}$ 和 $\boldsymbol{P}$。
 
-这里有一个关键问题：softmax 操作需要知道整行的最大值（用于数值稳定性），而分块计算时只能看到一部分。
-FlashAttention 通过维护一个 running maximum 来解决这个问题：在计算每一块时，更新当前已见的最大值，
-并对之前的部分进行重新缩放（rescaling）。这样，最终的结果与标准注意力在数学上是精确等价的，没有任何近似。
+这里有一个关键问题：标准 softmax 需要计算整行的指数和，而分块计算时只能看到一部分。
+FlashAttention 通过 online softmax 算法解决了这个问题。
+具体来说，对于注意力分数 $s_1, s_2, \ldots, s_n$，维护两个变量：
+当前最大值 $m_i = \max_{j \leq i} s_j$、当前指数和 $d_i = \sum_{j \leq i} e^{s_j - m_i}$。
+当新增一块分数后，新的最大值 $m'$ 可能大于旧的最大值 $m$，此时旧的指数和需要乘以 $e^{m - m'}$ 进行重新缩放：
+\[
+	d' = d \cdot e^{m - m'} + \sum_{j \in \text{新块}} e^{s_j - m'}
+\]
+最终每个分数的注意力权重为：
+\[
+	p_i = \frac{e^{s_i - m_n}}{d_n}
+\]
+这与一次性计算的标准 softmax 在数学上完全等价。
 
-此外，在反向传播时，FlashAttention 采用重计算（recomputation）策略：前向传播时不存储 $\boldsymbol{S}$ 和 $\boldsymbol{P}$，
-反向传播时重新计算它们。虽然增加了计算量，但大幅减少了显存占用（从 $O(n^2)$ 降到 $O(n)$），使得训练更长序列成为可能。
+此外，FlashAttention 在反向传播时采用了重计算（recomputation）策略。
+在训练的反向传播过程中，通常需要用到正向传播时产生的注意力矩阵，但如果将其完整保存，显存开销依然很大。
+FlashAttention 的做法是不保存注意力矩阵，而是在反向传播需要用到它时，
+利用 SRAM 中的分块数据和正向传播时记录的少量归一化统计量，重新计算对应的注意力矩阵。
+虽然这增加了一定的计算量，但由于省去了大量的 HBM 读写时间，整体速度反而更快。
 FlashAttention 已成为大模型训练和推理的标准组件，被集成到 PyTorch、DeepSpeed 等主流框架中。
 
 \section{PagedAttention}
@@ -51,36 +59,42 @@ FlashAttention 已成为大模型训练和推理的标准组件，被集成到 P
 这种方式会导致大量的显存浪费和碎片化，据统计，内部碎片和外部碎片可浪费 60\%--80\% 的显存。
 
 PagedAttention 借鉴了操作系统中虚拟内存的分页思想，将 KV Cache 划分为固定大小的块（block），
-每个块包含固定数量 token 的键值缓存（如 16 个 token）。这些块不需要在显存中连续存放，
+每个块包含固定数量 token 的KV Cache（如 16 个 token）。这些块不需要在显存中连续存放，
 而是通过一个块表（block table）来记录逻辑块到物理块的映射关系。
 
 当生成新的 token 时，系统按需分配新的块，而不是一次性分配大块连续显存。
 这样，显存的利用率可以接近 100\%，几乎没有浪费。此外，由于不同请求的 KV Cache 可以共享相同的块
 （例如在 beam search 或并行采样中，多个候选序列共享前缀），PagedAttention 还可以通过块拷贝（copy-on-write）
-进一步减少显存占用。
-
-PagedAttention 是 vLLM 系统的核心技术，它使得在相同显存下可以处理更多的并发请求，显著提升了推理服务的吞吐量。
+进一步减少显存占用，显著提升了推理服务的吞吐量。
 
 \section{线性注意力}
-标准注意力的计算复杂度是 $O(n^2 d)$，其中 $n$ 是序列长度，$d$ 是头维度。
-这是因为需要计算 $n \times n$ 的注意力分数矩阵 $\boldsymbol{S} = \boldsymbol{Q} \boldsymbol{K}^\mathrm{T} / \sqrt{d_k}$。
-当序列长度较短时（如几千），这个复杂度是可以接受的；但当序列长度达到数万甚至数十万时，
-$O(n^2)$ 的计算和显存开销 becomes 不可承受。
+因为需要计算 $n \times n$ 的注意力分数矩阵 $\boldsymbol{S} = \boldsymbol{Q} \boldsymbol{K}^\mathrm{T} / \sqrt{d_k}$，
+标准注意力的计算复杂度是 $O(n^2d)$，当序列长度达到数万甚至数十万时，计算开销就变得难以承受了。
+一个自然的想法是：能否通过更高效的矩阵乘法来避免这个瓶颈？
 
-线性注意力（Linear Attention）通过一种巧妙的变换，将注意力的复杂度从 $O(n^2 d)$ 降低到 $O(n d^2)$。
-其核心思想是用一个核函数 $\phi$ 来近似 softmax：
+如果暂时去掉 softmax 的归一化约束，考虑简化的注意力形式 $(\boldsymbol{Q}\boldsymbol{K}^\mathrm{T})\boldsymbol{V}$，
+利用矩阵乘法的结合律，可以改变计算顺序：
 $$
-	\text{Attention}(\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}) \approx \phi(\boldsymbol{Q}) \left( \phi(\boldsymbol{K})^\mathrm{T} \boldsymbol{V} \right)
+	(\boldsymbol{Q}\boldsymbol{K}^\mathrm{T})\boldsymbol{V} = \boldsymbol{Q}(\boldsymbol{K}^\mathrm{T}\boldsymbol{V})
 $$
-其中 $\phi(\boldsymbol{Q})$ 和 $\phi(\boldsymbol{K})$ 的维度都是 $n \times d$。
-关键的变化在于计算顺序：标准注意力是先计算 $\boldsymbol{Q} \boldsymbol{K}^\mathrm{T}$（$n \times n$），再乘以 $\boldsymbol{V}$（$n \times d$）；
-而线性注意力利用矩阵乘法的结合律，先计算 $\phi(\boldsymbol{K})^\mathrm{T} \boldsymbol{V}$（$d \times d$），再左乘 $\phi(\boldsymbol{Q})$（$n \times d$）。
-这样，避免了 $n \times n$ 矩阵的计算和存储。
+其中 $\boldsymbol{K}^\mathrm{T}\boldsymbol{V} \in \mathbb{R}^{d \times d}$，计算复杂度 $O(nd^2)$；
+$\boldsymbol{Q}(\boldsymbol{K}^\mathrm{T}\boldsymbol{V}) \in \mathbb{R}^{n \times d}$，计算复杂度同样是 $O(nd^2)$。
+由于 $d \ll n$，$O(nd^2)$ 远优于 $O(n^2 d)$。这就是线性注意力的核心思想——通过改变计算顺序，将复杂度从关于 $n$ 的二次方降低到线性。
 
+然而，softmax 引入了行归一化和指数运算，这使得计算无法简单地分解为上述结合律的形式。
+线性注意力的解决方案是引入核函数 $\kappa$ 来替代 softmax 中的指数点积，
+通过设计可分解的核函数 $\kappa(\boldsymbol{q}_i, \boldsymbol{k}_j) = \phi(\boldsymbol{q}_i)^\top \phi(\boldsymbol{k}_j)$，
+将注意力输出改写为：
+$$
+	\boldsymbol{o}_i = \frac{\sum_{j=1}^n \kappa(\boldsymbol{q}_i, \boldsymbol{k}_j)\boldsymbol{v}_j}{\sum_{j=1}^n \kappa(\boldsymbol{q}_i, \boldsymbol{k}_j)}
+	= \frac{\phi(\boldsymbol{q}_i)^\top \sum_{j=1}^n \phi(\boldsymbol{k}_j)\boldsymbol{v}_j^\top}{\phi(\boldsymbol{q}_i)^\top \sum_{j=1}^n \phi(\boldsymbol{k}_j)}
+$$
+
+定义聚合量 $\boldsymbol{S}_t = \sum_{j=1}^t \phi(\boldsymbol{k}_j)\boldsymbol{v}_j^\top \in \mathbb{R}^{d \times d}$，$\boldsymbol{z}_t = \sum_{j=1}^t \phi(\boldsymbol{k}_j) \in \mathbb{R}^d$。
 从形式上看，线性注意力可以看作是一种 RNN：在序列的每一步 $t$，维护一个 $d \times d$ 的状态矩阵 $\boldsymbol{S}_t = \boldsymbol{S}_{t-1} + \phi(\boldsymbol{k}_t) \boldsymbol{v}_t^\mathrm{T}$，
-输出 $\boldsymbol{o}_t = \phi(\boldsymbol{q}_t) \boldsymbol{S}_t$。这与第5章介绍的 RNN 结构非常相似，只是状态更新方式不同。
+输出 $\boldsymbol{o}_t = \phi(\boldsymbol{q}_t) \boldsymbol{S}_t / (\phi(\boldsymbol{q}_t) \boldsymbol{z}_t)$。这与第5章介绍的 RNN 结构非常相似，只是状态更新方式不同。
 
 线性注意力的主要挑战在于如何选择合适的核函数 $\phi$ 来近似 softmax，使得近似误差尽可能小。
 常见的方法包括使用泰勒展开、随机特征近似（如 Performer）、或者通过训练学习核函数。
 尽管线性注意力在长序列处理上有理论优势，但在实际应用中，由于近似误差和硬件优化等因素，
-它通常作为标准注意力的补充，用于特定的长序列场景。
+它通常是作为标准注意力的补充出现。
