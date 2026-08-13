@@ -1,4 +1,4 @@
-\section{JavaScript简介}
+\section{语言简介}
 严格来说，JavaScript 是 Sun Microsystems（现已并入 Oracle）的注册商标，最初用于指代 Netscape（现 Mozilla）对该语言的实现，
 而这门语言的标准化工作由 Ecma International 负责。由于商标限制，其标准版本被命名为 ECMAScript（简称 ES）。
 
@@ -7,5 +7,9 @@
 不过，程序可以选择开启严格模式（strict mode）。在严格模式下，一些过时或不安全的语法将被禁止。
 严格模式既可以通过在代码开头添加 "use strict" 显式启用，也可能因为使用某些新的语言特性而隐式触发。
 
-
-
+随着 JavaScript 的应用规模不断扩大，它的一些固有局限性逐渐显现出来：缺乏静态类型检查、
+大型项目中重构困难、IDE 支持不够精确等。为了解决这些问题，Microsoft 于 2012 年推出了 TypeScript，
+主要设计者是 Anders Hejlsberg（Delphi 和 C\# 的核心设计师）。
+TypeScript 是 JavaScript 的严格超集，在 JS 的基础上添加了可选的静态类型系统——
+支持结构子类型、联合类型、交叉类型和泛型等，通过编译器（tsc）转换为纯 JavaScript，
+类型检查完全发生在编译期，不会在运行时产生额外开销。

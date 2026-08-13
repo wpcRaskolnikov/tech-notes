@@ -5,14 +5,21 @@
 \usepackage{graphicx}
 \graphicspath{{figures/}}
 \numberwithin{figure}{section}
-\numberwithin{table}{section} 
+\numberwithin{table}{section}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage{enumitem}
+\usepackage{shortvrb}
+\MakeShortVerb{@}
+\usepackage{tcolorbox}
 
-
-\title{JavaScript}
+\title{HTML}
 \author{WPC}
 \date{\today}
+
+\newenvironment{code}[1][]
+	{\begin{tcolorbox}[colback=gray!10, colframe=gray!50, #1]}
+	{\end{tcolorbox}}
 
 \begin{document}
 
@@ -23,7 +30,6 @@
 \include{chapters/chapter2}
 \include{chapters/chapter3}
 \include{chapters/chapter4}
-
-
+\include{chapters/chapter5}
 
 \end{document}

@@ -13,8 +13,10 @@
 
 \subsection{类型}
 在 JavaScript 中，类型分为原始类型和对象类型，对象类型是可修改的（mutable），而原始类型是不可修改的（immutable）。
-原始类型包括：数值（Number）、字符串（String）、布尔值（Boolean）、null、undefined 和 Symbol。
+原始类型包括：数值（Number）、字符串（String）、布尔值（Boolean）、null、undefined、Symbol和BigInt。
 对象类型则更为丰富，例如：数组（Array）、集合（Set）、映射（Map）、正则表达式（RegExp）、日期（Date）、错误对象（Error）等。
+此外，TypeScript 在此基础上提供了更丰富的类型工具，如工具类型（Utility Types），详见
+\href{https://www.typescriptlang.org/docs/handbook/utility-types.html}{TypeScript 官方文档}。
 
 \subsubsection{数值}
 在 JavaScript 中，十六进制字面量以 0x 或 0X 开头；整数还可以使用 二进制 或 八进制 表示，分别以前缀 0b 和 0o（或 0B、0O）开头。
@@ -66,6 +68,31 @@ Symbol.for() 会在全局符号注册表中查找指定的字符串键，如果�
 \begin{verbatim}
     let [a, [b, c]] = [1, [2, 3]]; // a = 1, b = 2, c = 3
     let {x, y = 10} = {x: 5}; // x = 5, y = 10
+\end{verbatim}
+
+\subsubsection{多余属性}
+在 TypeScript 中，当对象字面量赋值给一个类型标注或接口时，编译器会执行多余属性检查（Excess Property Check），
+拒绝字面量中包含目标类型未定义的属性。这一机制可以捕获常见的拼写错误和类型误用。
+\begin{verbatim}
+    interface Point { x: number; y: number; }
+    const p: Point = { x: 1, y: 2, z: 3 }; // 错误：对象字面量只能指定已知的属性
+\end{verbatim}
+需要注意的是，多余属性检查仅针对对象字面量。如果一个对象先通过其他途径获得了额外属性，再赋值给类型变量，
+或者通过类型断言绕过检查，编译器不会报错。若确实需要传递额外属性，可以使用索引签名或联合类型来声明，
+也可以通过类型断言（\verb|as|）来绕过多余属性检查：
+\begin{verbatim}
+    interface Point { x: number; y: number; }
+    const p = { x: 1, y: 2, z: 3 } as Point; // 使用 as 绕过检查
+\end{verbatim}
+此外，还可以通过中间变量赋值或索引签名来规避检查：
+\begin{verbatim}
+    // 方式一：中间变量
+    const obj = { x: 1, y: 2, z: 3 };
+    const p: Point = obj; // 合法，obj 不是对象字面量
+
+    // 方式二：索引签名
+    interface PointWithExtra { x: number; y: number; [key: string]: unknown; }
+    const p2: PointWithExtra = { x: 1, y: 2, z: 3 };
 \end{verbatim}
 
 \subsection{操作符}
